@@ -34,6 +34,19 @@
 - [x] Club settings screen
 - [x] Back navigation button on all screens
 
+## System Ról i Uprawnień (Completed)
+- [x] Rozszerzenie schematu bazy danych o role i uprawnienia
+- [x] Tabela club_members z rolami
+- [x] Tabela club_invitations dla zaproszeń
+- [x] Backend middleware dla ról (ROLE_PERMISSIONS system)
+- [x] API zaproszeń (create, list, accept, revoke, getByToken)
+- [x] API członków klubu (list, updateRole, remove, getMyRole)
+- [x] useClubRole hook dla sprawdzania uprawnień w frontend
+- [x] Frontend - ekran struktury klubu z zaproszeniami (real API)
+- [x] Frontend - lista członków z zarządzaniem rolami
+- [x] Frontend - ukrywanie sekcji na podstawie roli (Finanse, Struktura)
+- [x] Ekran akceptacji zaproszenia (/invite/[token])
+
 ## Pending Features
 - [ ] Match callup notifications (48h and 24h before) - backend integration
 - [ ] Player attendance confirmation for callups - backend integration

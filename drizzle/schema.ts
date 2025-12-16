@@ -439,3 +439,29 @@ export const clubMembersRelations = relations(clubMembers, ({ one }) => ({
 export const injuriesRelations = relations(injuries, ({ one }) => ({
   player: one(players, { fields: [injuries.playerId], references: [players.id] }),
 }));
+
+/**
+ * Club invitations table - manages pending invitations to join clubs
+ */
+export const clubInvitations = mysqlTable("clubInvitations", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  role: mysqlEnum("role", ["manager", "board_member", "board_member_finance", "coach", "player"]).default("player").notNull(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  invitedBy: int("invitedBy").notNull(),
+  status: mysqlEnum("status", ["pending", "accepted", "revoked", "expired"]).default("pending").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  acceptedBy: int("acceptedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ClubInvitation = typeof clubInvitations.$inferSelect;
+export type InsertClubInvitation = typeof clubInvitations.$inferInsert;
+
+export const clubInvitationsRelations = relations(clubInvitations, ({ one }) => ({
+  club: one(clubs, { fields: [clubInvitations.clubId], references: [clubs.id] }),
+  inviter: one(users, { fields: [clubInvitations.invitedBy], references: [users.id] }),
+}));

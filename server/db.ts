@@ -4,6 +4,7 @@ import {
   InsertUser, users,
   InsertClub, clubs,
   InsertClubMember, clubMembers,
+  InsertClubInvitation, clubInvitations,
   InsertTeam, teams,
   InsertPlayer, players,
   InsertPlayerStat, playerStats,
@@ -728,4 +729,72 @@ export async function getCalendarEvents(clubId: number, startDate: Date, endDate
   });
   
   return { matches: filteredMatches, trainings: filteredTrainings };
+}
+
+// ============================================
+// INVITATION FUNCTIONS
+// ============================================
+export async function createInvitation(data: InsertClubInvitation) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(clubInvitations).values(data);
+  return result[0].insertId;
+}
+
+export async function getInvitationsByClubId(clubId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(clubInvitations).where(eq(clubInvitations.clubId, clubId)).orderBy(desc(clubInvitations.createdAt));
+}
+
+export async function getInvitationByToken(token: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(clubInvitations).where(eq(clubInvitations.token, token)).limit(1);
+  return result[0];
+}
+
+export async function getInvitationById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(clubInvitations).where(eq(clubInvitations.id, id)).limit(1);
+  return result[0];
+}
+
+export async function updateInvitation(id: number, data: Partial<InsertClubInvitation>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(clubInvitations).set(data).where(eq(clubInvitations.id, id));
+}
+
+export async function getPendingInvitationByEmail(clubId: number, email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(clubInvitations)
+    .where(and(
+      eq(clubInvitations.clubId, clubId),
+      eq(clubInvitations.email, email),
+      eq(clubInvitations.status, "pending")
+    ))
+    .limit(1);
+  return result[0];
+}
+
+export async function getClubMembersWithUsers(clubId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const members = await db.select().from(clubMembers).where(eq(clubMembers.clubId, clubId));
+  const result = [];
+  for (const member of members) {
+    const user = await getUserById(member.userId);
+    result.push({ ...member, user });
+  }
+  return result;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result[0];
 }

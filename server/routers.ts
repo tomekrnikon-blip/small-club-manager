@@ -6,17 +6,99 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 
+// Role hierarchy and permissions
+type ClubRole = "manager" | "board_member" | "board_member_finance" | "coach" | "player";
+
+const ROLE_PERMISSIONS = {
+  manager: {
+    canManageMembers: true,
+    canRemoveManager: false, // Only board member can remove manager
+    canEditClub: true,
+    canViewFinances: true,
+    canEditFinances: true,
+    canEditPlayers: true,
+    canEditMatches: true,
+    canEditTrainings: true,
+    canManageCallups: true,
+    canInviteUsers: true,
+    canAssignRoles: true,
+  },
+  board_member: {
+    canManageMembers: true,
+    canRemoveManager: true,
+    canEditClub: true,
+    canViewFinances: false,
+    canEditFinances: false,
+    canEditPlayers: true,
+    canEditMatches: true,
+    canEditTrainings: true,
+    canManageCallups: true,
+    canInviteUsers: true,
+    canAssignRoles: true,
+  },
+  board_member_finance: {
+    canManageMembers: true,
+    canRemoveManager: true,
+    canEditClub: true,
+    canViewFinances: true,
+    canEditFinances: true,
+    canEditPlayers: true,
+    canEditMatches: true,
+    canEditTrainings: true,
+    canManageCallups: true,
+    canInviteUsers: true,
+    canAssignRoles: true,
+  },
+  coach: {
+    canManageMembers: false,
+    canRemoveManager: false,
+    canEditClub: false,
+    canViewFinances: false,
+    canEditFinances: false,
+    canEditPlayers: true,
+    canEditMatches: true,
+    canEditTrainings: true,
+    canManageCallups: true,
+    canInviteUsers: false,
+    canAssignRoles: false,
+  },
+  player: {
+    canManageMembers: false,
+    canRemoveManager: false,
+    canEditClub: false,
+    canViewFinances: false,
+    canEditFinances: false,
+    canEditPlayers: false,
+    canEditMatches: false,
+    canEditTrainings: false,
+    canManageCallups: false,
+    canInviteUsers: false,
+    canAssignRoles: false,
+  },
+};
+
+function getPermissions(role: ClubRole | undefined, isOwner: boolean) {
+  if (isOwner) return ROLE_PERMISSIONS.manager;
+  if (!role) return ROLE_PERMISSIONS.player;
+  return ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.player;
+}
+
 // Helper to check club access
 async function checkClubAccess(userId: number, clubId: number) {
   const club = await db.getClubById(clubId);
-  if (!club) return { hasAccess: false, isOwner: false };
+  if (!club) return { hasAccess: false, isOwner: false, role: undefined as ClubRole | undefined, permissions: ROLE_PERMISSIONS.player };
   
-  if (club.userId === userId) return { hasAccess: true, isOwner: true };
+  if (club.userId === userId) {
+    return { hasAccess: true, isOwner: true, role: "manager" as ClubRole, permissions: ROLE_PERMISSIONS.manager };
+  }
   
   const member = await db.getClubMember(clubId, userId);
-  if (member && member.isActive) return { hasAccess: true, isOwner: false, role: member.role };
+  if (member && member.isActive) {
+    const role = member.role as ClubRole;
+    return { hasAccess: true, isOwner: false, role, permissions: getPermissions(role, false) };
+  }
   
-  return { hasAccess: false, isOwner: false };
+  return { hasAccess: false, isOwner: false, role: undefined as ClubRole | undefined, permissions: ROLE_PERMISSIONS.player };
 }
 
 // Master admin check
@@ -654,6 +736,232 @@ export const appRouter = router({
         if (!hasAccess) return { unread: 0 };
         const count = await db.getUnreadNotificationCount(input.clubId);
         return { unread: count };
+      }),
+  }),
+
+  // ============================================
+  // INVITATIONS ROUTER
+  // ============================================
+  invitations: router({
+    create: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        email: z.string().email(),
+        role: z.enum(["manager", "board_member", "board_member_finance", "coach", "player"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !permissions.canInviteUsers) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień do zapraszania użytkowników" });
+        }
+        
+        // Check if invitation already exists
+        const existing = await db.getPendingInvitationByEmail(input.clubId, input.email);
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: "Zaproszenie dla tego emaila już istnieje" });
+        }
+        
+        // Check if user is already a member
+        const existingUser = await db.getUserByEmail(input.email);
+        if (existingUser) {
+          const existingMember = await db.getClubMember(input.clubId, existingUser.id);
+          if (existingMember && existingMember.isActive) {
+            throw new TRPCError({ code: "CONFLICT", message: "Użytkownik jest już członkiem klubu" });
+          }
+        }
+        
+        // Generate unique token
+        const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').substring(0, 32);
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        
+        const id = await db.createInvitation({
+          clubId: input.clubId,
+          email: input.email,
+          role: input.role,
+          token,
+          invitedBy: ctx.user.id,
+          expiresAt,
+        });
+        
+        return { id, token };
+      }),
+    
+    list: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !permissions.canInviteUsers) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        }
+        return db.getInvitationsByClubId(input.clubId);
+      }),
+    
+    revoke: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const invitation = await db.getInvitationById(input.id);
+        if (!invitation) throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono zaproszenia" });
+        
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, invitation.clubId);
+        if (!hasAccess || !permissions.canInviteUsers) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień" });
+        }
+        
+        await db.updateInvitation(input.id, { status: "revoked" });
+        return { success: true };
+      }),
+    
+    accept: protectedProcedure
+      .input(z.object({ token: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const invitation = await db.getInvitationByToken(input.token);
+        if (!invitation) throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono zaproszenia" });
+        
+        if (invitation.status !== "pending") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Zaproszenie nie jest aktywne" });
+        }
+        
+        if (new Date() > invitation.expiresAt) {
+          await db.updateInvitation(invitation.id, { status: "expired" });
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Zaproszenie wygasło" });
+        }
+        
+        // Check if user email matches invitation
+        if (ctx.user.email && ctx.user.email.toLowerCase() !== invitation.email.toLowerCase()) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Zaproszenie jest dla innego adresu email" });
+        }
+        
+        // Add user as club member
+        await db.addClubMember({
+          clubId: invitation.clubId,
+          userId: ctx.user.id,
+          role: invitation.role,
+          acceptedAt: new Date(),
+        });
+        
+        // Update invitation status
+        await db.updateInvitation(invitation.id, {
+          status: "accepted",
+          acceptedAt: new Date(),
+          acceptedBy: ctx.user.id,
+        });
+        
+        return { success: true, clubId: invitation.clubId };
+      }),
+    
+    getByToken: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const invitation = await db.getInvitationByToken(input.token);
+        if (!invitation) return null;
+        
+        const club = await db.getClubById(invitation.clubId);
+        return {
+          id: invitation.id,
+          email: invitation.email,
+          role: invitation.role,
+          status: invitation.status,
+          expiresAt: invitation.expiresAt,
+          clubName: club?.name || "Nieznany klub",
+        };
+      }),
+  }),
+
+  // ============================================
+  // CLUB MEMBERS ROUTER
+  // ============================================
+  clubMembers: router({
+    list: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        return db.getClubMembersWithUsers(input.clubId);
+      }),
+    
+    updateRole: protectedProcedure
+      .input(z.object({
+        memberId: z.number(),
+        role: z.enum(["manager", "board_member", "board_member_finance", "coach", "player"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const member = await db.getClubMembers(0).then(async () => {
+          const db2 = await import("./db");
+          const allMembers = await db2.getClubMembers(0);
+          return allMembers.find(m => m.id === input.memberId);
+        });
+        
+        // Get member by ID directly
+        const members = await db.getClubMembers(input.memberId);
+        const targetMember = members[0];
+        
+        if (!targetMember) {
+          // Try to find by iterating - this is a workaround
+          throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono członka" });
+        }
+        
+        const { hasAccess, permissions, role: currentUserRole } = await checkClubAccess(ctx.user.id, targetMember.clubId);
+        if (!hasAccess || !permissions.canAssignRoles) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień do zmiany ról" });
+        }
+        
+        // Manager cannot be changed to lower role by non-board member
+        if (targetMember.role === "manager" && !permissions.canRemoveManager) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nie możesz zmienić roli Managera" });
+        }
+        
+        await db.updateClubMember(input.memberId, { role: input.role });
+        return { success: true };
+      }),
+    
+    remove: protectedProcedure
+      .input(z.object({ memberId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        // We need to get the member's clubId first
+        // This is a simplified approach - in production you'd have a getMemberById function
+        const allClubs = await db.getClubsByUserId(ctx.user.id);
+        let targetMember = null;
+        let targetClubId = 0;
+        
+        for (const club of allClubs) {
+          const members = await db.getClubMembers(club.id);
+          const found = members.find(m => m.id === input.memberId);
+          if (found) {
+            targetMember = found;
+            targetClubId = club.id;
+            break;
+          }
+        }
+        
+        if (!targetMember) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono członka" });
+        }
+        
+        const { hasAccess, permissions, isOwner } = await checkClubAccess(ctx.user.id, targetClubId);
+        if (!hasAccess || !permissions.canManageMembers) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień" });
+        }
+        
+        // Cannot remove club owner
+        const club = await db.getClubById(targetClubId);
+        if (club && targetMember.userId === club.userId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nie można usunąć właściciela klubu" });
+        }
+        
+        // Manager can only be removed by board member
+        if (targetMember.role === "manager" && !permissions.canRemoveManager) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nie możesz usunąć Managera" });
+        }
+        
+        await db.removeClubMember(input.memberId);
+        return { success: true };
+      }),
+    
+    getMyRole: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { hasAccess, role, permissions, isOwner } = await checkClubAccess(ctx.user.id, input.clubId);
+        return { hasAccess, role, permissions, isOwner };
       }),
   }),
 

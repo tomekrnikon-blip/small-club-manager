@@ -9,6 +9,7 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useClubRole } from "@/hooks/use-club-role";
 
 type TransactionType = "income" | "expense";
 
@@ -17,6 +18,11 @@ export default function FinancesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const utils = trpc.useUtils();
+
+  // Get first club for role check
+  const { data: clubsForRole } = trpc.clubs.list.useQuery(undefined, { enabled: isAuthenticated });
+  const clubIdForRole = clubsForRole?.[0]?.id;
+  const { permissions, isLoading: roleLoading } = useClubRole(clubIdForRole);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [transactionType, setTransactionType] = useState<TransactionType>("income");
@@ -99,6 +105,20 @@ export default function FinancesScreen() {
     );
   }
 
+  // Check if user has permission to view finances
+  if (!roleLoading && !permissions.canViewFinances) {
+    return (
+      <ThemedView style={[styles.container, styles.centered]}>
+        <MaterialIcons name="lock" size={48} color="#64748b" />
+        <ThemedText style={[styles.emptyText, { marginTop: 16 }]}>Brak dostępu do finansów</ThemedText>
+        <ThemedText style={[styles.emptyText, { fontSize: 14, opacity: 0.7 }]}>Tylko Manager i Członek Zarządu (Finanse) mają dostęp</ThemedText>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 20, padding: 12 }}>
+          <ThemedText style={{ color: AppColors.primary }}>Wróć</ThemedText>
+        </Pressable>
+      </ThemedView>
+    );
+  }
+
   const balance = (summary?.totalIncome || 0) - (summary?.totalExpense || 0);
 
   return (
@@ -109,9 +129,11 @@ export default function FinancesScreen() {
           <MaterialIcons name="arrow-back" size={24} color="#fff" />
         </Pressable>
         <ThemedText style={styles.title}>Finanse</ThemedText>
-        <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
-          <MaterialIcons name="add" size={24} color="#fff" />
-        </Pressable>
+        {permissions.canEditFinances && (
+          <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
+            <MaterialIcons name="add" size={24} color="#fff" />
+          </Pressable>
+        )}
       </View>
 
       {/* Summary Cards */}

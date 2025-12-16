@@ -8,6 +8,7 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useClubRole } from "@/hooks/use-club-role";
 
 export default function MoreScreen() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -19,6 +20,7 @@ export default function MoreScreen() {
   });
 
   const club = clubs?.[0];
+  const { permissions, role } = useClubRole(club?.id);
 
   const handleLogout = () => {
     Alert.alert(
@@ -77,11 +79,13 @@ export default function MoreScreen() {
               label="Ustawienia klubu"
               onPress={() => router.push("/club/settings" as any)}
             />
+            {permissions.canInviteUsers && (
             <MenuItem
               icon="people"
               label="Struktura klubu"
               onPress={() => router.push("/club-structure" as any)}
             />
+          )}
             <MenuItem
               icon="groups"
               label="Drużyny"
@@ -98,11 +102,13 @@ export default function MoreScreen() {
             label="Treningi"
             onPress={() => router.push("/trainings" as any)}
           />
-          <MenuItem
-            icon="attach-money"
-            label="Finanse"
-            onPress={() => router.push("/finances" as any)}
-          />
+{permissions.canViewFinances && (
+            <MenuItem
+              icon="attach-money"
+              label="Finanse"
+              onPress={() => router.push("/finances" as any)}
+            />
+          )}
           <MenuItem
             icon="school"
             label="Szkółka"
