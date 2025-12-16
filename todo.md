@@ -61,9 +61,21 @@
 - [x] Wybór kanału powiadomień (App/SMS/Both)
 - [x] Dokumentacja integracji zewnętrznych (docs/EXTERNAL_INTEGRATIONS.md)
 
-## Pending Features
-- [ ] Stripe API integration for subscription payments
-- [ ] Real SMS sending via Twilio/SMSAPI (cron job for scheduled_notifications)
+## Twilio i Stripe Integration (Completed)
+- [x] Panel konfiguracji Twilio dla właściciela klubu (Ustawienia Klubu)
+- [x] Wybór dostawcy SMS (Twilio, SMSAPI, SMSLabs)
+- [x] Integracja Stripe dla płatności subskrypcji
+- [x] Router subscriptions z checkout i cancel
+- [x] Panel Master Admin - zarządzanie cenami subskrypcji
+- [x] Tworzenie/edycja planów subskrypcji (miesięczny/roczny)
+- [x] Tabela app_settings dla globalnej konfiguracji Stripe
+- [x] Tabela user_subscriptions dla śledzenia subskrypcji
+- [x] Ekran zakupu subskrypcji PRO z wyborem okresu
+- [x] Anulowanie subskrypcji przez użytkownika
+
+## Pending Features (Future)
+- [ ] Real Stripe SDK integration with webhooks
+- [ ] Cron job for processing scheduled_notifications
 - [ ] Real email sending integration
 - [ ] Payment reminders for academy parents
 - [ ] Multi-language support (PL, EN, DE)

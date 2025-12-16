@@ -1,5 +1,6 @@
-import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useRouter, Stack } from "expo-router";
+import { useState } from "react";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
@@ -7,6 +8,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
+import { trpc } from "@/lib/trpc";
 
 const features = {
   free: [
@@ -29,12 +31,69 @@ const features = {
   ],
 };
 
+type BillingPeriod = 'monthly' | 'yearly';
+
 export default function SubscriptionScreen() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const utils = trpc.useUtils();
+  
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+
+  const { data: plans, isLoading: loadingPlans } = trpc.subscriptions.getPlans.useQuery();
+  const { data: currentSubscription } = trpc.subscriptions.getCurrentSubscription.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const createCheckoutMutation = trpc.subscriptions.createCheckoutSession.useMutation({
+    onSuccess: (data) => {
+      if (data.url) {
+        Linking.openURL(data.url);
+      }
+      setIsProcessing(false);
+    },
+    onError: (error: any) => {
+      Alert.alert("Błąd", error.message || "Nie udało się utworzyć sesji płatności");
+      setIsProcessing(false);
+    },
+  });
+
+  const cancelSubscriptionMutation = trpc.subscriptions.cancelSubscription.useMutation({
+    onSuccess: () => {
+      utils.subscriptions.getCurrentSubscription.invalidate();
+      Alert.alert("Sukces", "Subskrypcja została anulowana.");
+    },
+    onError: (error: any) => {
+      Alert.alert("Błąd", error.message);
+    },
+  });
+
+  const handleSubscribe = async (planId: number) => {
+    if (!isAuthenticated) {
+      Alert.alert("Wymagane logowanie", "Zaloguj się, aby wykupić subskrypcję.");
+      return;
+    }
+    setIsProcessing(true);
+    setSelectedPlanId(planId);
+    createCheckoutMutation.mutate({ planId, billingPeriod });
+  };
+
+  const handleCancelSubscription = () => {
+    Alert.alert(
+      "Anuluj subskrypcję",
+      "Czy na pewno chcesz anulować subskrypcję PRO?",
+      [
+        { text: "Nie", style: "cancel" },
+        { text: "Tak, anuluj", style: "destructive", onPress: () => cancelSubscriptionMutation.mutate() },
+      ]
+    );
+  };
 
   const isPro = user?.isPro;
+  const hasActiveStripeSubscription = currentSubscription?.status === 'active' && currentSubscription?.stripeSubscriptionId;
 
   if (!isAuthenticated) {
     return (
@@ -46,6 +105,8 @@ export default function SubscriptionScreen() {
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
@@ -129,8 +190,28 @@ export default function SubscriptionScreen() {
                 <ThemedText style={styles.currentPlanBadgeText}>Twój plan</ThemedText>
               </View>
             ) : (
-              <Pressable style={styles.upgradeButton}>
-                <ThemedText style={styles.upgradeButtonText}>Przejdź na PRO</ThemedText>
+              <Pressable 
+                style={[styles.upgradeButton, isProcessing && styles.upgradeButtonDisabled]}
+                onPress={() => {
+                  // Use first plan from database or show contact message
+                  if (plans && plans.length > 0) {
+                    handleSubscribe(plans[0].id);
+                  } else {
+                    Alert.alert("Informacja", "Skontaktuj się z administratorem, aby aktywować plan PRO.");
+                  }
+                }}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ThemedText style={styles.upgradeButtonText}>Przejdź na PRO</ThemedText>
+                )}
+              </Pressable>
+            )}
+            {hasActiveStripeSubscription && (
+              <Pressable style={styles.cancelSubButton} onPress={handleCancelSubscription}>
+                <ThemedText style={styles.cancelSubButtonText}>Anuluj subskrypcję</ThemedText>
               </Pressable>
             )}
           </View>
@@ -330,10 +411,25 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     alignItems: "center",
   },
+  upgradeButtonDisabled: {
+    opacity: 0.6,
+  },
   upgradeButtonText: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#fff",
+  },
+  cancelSubButton: {
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    alignItems: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderRadius: Radius.md,
+  },
+  cancelSubButtonText: {
+    fontSize: 14,
+    color: "#ef4444",
+    fontWeight: "500",
   },
   faqSection: {
     marginBottom: Spacing.xl,

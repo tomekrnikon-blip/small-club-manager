@@ -44,6 +44,10 @@ export const clubs = mysqlTable("clubs", {
   reminderEmailSignature: varchar("reminderEmailSignature", { length: 255 }),
   smsProvider: mysqlEnum("smsProvider", ["none", "smsapi", "twilio", "smslabs"]).default("none").notNull(),
   smsApiKey: varchar("smsApiKey", { length: 255 }),
+  twilioAccountSid: varchar("twilioAccountSid", { length: 255 }),
+  twilioAuthToken: varchar("twilioAuthToken", { length: 255 }),
+  twilioPhoneNumber: varchar("twilioPhoneNumber", { length: 20 }),
+  smsapiToken: varchar("smsapiToken", { length: 255 }),
   smsSenderName: varchar("smsSenderName", { length: 11 }),
   smsEnabled: boolean("smsEnabled").default(false).notNull(),
   smsMonthlyLimit: int("smsMonthlyLimit").default(500),
@@ -493,4 +497,49 @@ export type InsertClubInvitation = typeof clubInvitations.$inferInsert;
 export const clubInvitationsRelations = relations(clubInvitations, ({ one }) => ({
   club: one(clubs, { fields: [clubInvitations.clubId], references: [clubs.id] }),
   inviter: one(users, { fields: [clubInvitations.invitedBy], references: [users.id] }),
+}));
+
+
+/**
+ * App settings - global application settings managed by Master Admin
+ */
+export const appSettings = mysqlTable("appSettings", {
+  id: int("id").autoincrement().primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value"),
+  description: varchar("description", { length: 255 }),
+  updatedBy: int("updatedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type InsertAppSetting = typeof appSettings.$inferInsert;
+
+/**
+ * User subscriptions - tracks user subscription history
+ */
+export const userSubscriptions = mysqlTable("userSubscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  planId: int("planId").notNull(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
+  status: mysqlEnum("status", ["active", "cancelled", "past_due", "trialing", "expired", "manual"]).default("active").notNull(),
+  billingPeriod: mysqlEnum("billingPeriod", ["monthly", "yearly"]).default("monthly").notNull(),
+  currentPeriodStart: timestamp("currentPeriodStart"),
+  currentPeriodEnd: timestamp("currentPeriodEnd"),
+  cancelledAt: timestamp("cancelledAt"),
+  grantedBy: int("grantedBy"), // For manual grants by Master Admin
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
+
+export const userSubscriptionsRelations = relations(userSubscriptions, ({ one }) => ({
+  user: one(users, { fields: [userSubscriptions.userId], references: [users.id] }),
+  plan: one(subscriptionPlans, { fields: [userSubscriptions.planId], references: [subscriptionPlans.id] }),
+  granter: one(users, { fields: [userSubscriptions.grantedBy], references: [users.id] }),
 }));

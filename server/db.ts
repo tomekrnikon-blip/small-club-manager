@@ -22,6 +22,8 @@ import {
   InsertNotification, notifications,
   InsertSubscriptionPlan, subscriptionPlans,
   InsertScheduledNotification, scheduledNotifications,
+  InsertAppSetting, appSettings,
+  InsertUserSubscription, userSubscriptions,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -947,4 +949,141 @@ export async function cancelScheduledNotificationsForMatch(matchId: number) {
       eq(scheduledNotifications.referenceType, "match"),
       eq(scheduledNotifications.status, "pending")
     ));
+}
+
+
+// ============================================
+// APP SETTINGS FUNCTIONS (Master Admin only)
+// ============================================
+export async function getAppSetting(key: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(appSettings).where(eq(appSettings.key, key));
+  return result[0] || null;
+}
+
+export async function getAllAppSettings() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(appSettings);
+}
+
+export async function setAppSetting(key: string, value: string, description?: string, updatedBy?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await getAppSetting(key);
+  if (existing) {
+    await db.update(appSettings)
+      .set({ value, description, updatedBy })
+      .where(eq(appSettings.key, key));
+  } else {
+    await db.insert(appSettings).values({ key, value, description, updatedBy });
+  }
+}
+
+export async function deleteAppSetting(key: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(appSettings).where(eq(appSettings.key, key));
+}
+
+// ============================================
+// USER SUBSCRIPTION FUNCTIONS
+// ============================================
+export async function getUserSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select()
+    .from(userSubscriptions)
+    .where(and(
+      eq(userSubscriptions.userId, userId),
+      eq(userSubscriptions.status, 'active')
+    ))
+    .orderBy(desc(userSubscriptions.createdAt))
+    .limit(1);
+  return result[0] || null;
+}
+
+export async function getUserSubscriptionHistory(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select()
+    .from(userSubscriptions)
+    .where(eq(userSubscriptions.userId, userId))
+    .orderBy(desc(userSubscriptions.createdAt));
+}
+
+export async function createUserSubscription(data: InsertUserSubscription) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(userSubscriptions).values(data);
+  return (result as any)[0]?.insertId || 0;
+}
+
+export async function updateUserSubscription(id: number, data: Partial<InsertUserSubscription>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(userSubscriptions).set(data).where(eq(userSubscriptions.id, id));
+}
+
+export async function cancelUserSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(userSubscriptions)
+    .set({ status: 'cancelled', cancelledAt: new Date() })
+    .where(and(
+      eq(userSubscriptions.userId, userId),
+      eq(userSubscriptions.status, 'active')
+    ));
+}
+
+// Grant PRO manually (by Master Admin)
+export async function grantProSubscription(userId: number, planId: number, grantedBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Cancel any existing subscription
+  await cancelUserSubscription(userId);
+  
+  // Create new manual subscription
+  const result = await db.insert(userSubscriptions).values({
+    userId,
+    planId,
+    status: 'manual',
+    billingPeriod: 'yearly',
+    grantedBy,
+    currentPeriodStart: new Date(),
+    currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+  });
+  
+  // Update user's isPro status
+  await db.update(users)
+    .set({ 
+      isPro: true, 
+      proGrantedBy: grantedBy, 
+      proGrantedAt: new Date(),
+      subscriptionPlanId: planId,
+      subscriptionStatus: 'manual'
+    })
+    .where(eq(users.id, userId));
+  
+  return (result as any)[0]?.insertId || 0;
+}
+
+export async function revokeProSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await cancelUserSubscription(userId);
+  
+  await db.update(users)
+    .set({ 
+      isPro: false, 
+      proGrantedBy: null, 
+      proGrantedAt: null,
+      subscriptionPlanId: null,
+      subscriptionStatus: null
+    })
+    .where(eq(users.id, userId));
 }

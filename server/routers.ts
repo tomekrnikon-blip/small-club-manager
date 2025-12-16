@@ -174,6 +174,34 @@ export const appRouter = router({
         await db.deleteClub(input.id);
         return { success: true };
       }),
+
+    updateSmsConfig: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        smsEnabled: z.boolean(),
+        smsProvider: z.enum(['none', 'twilio', 'smsapi']),
+        twilioAccountSid: z.string().optional(),
+        twilioAuthToken: z.string().optional(),
+        twilioPhoneNumber: z.string().optional(),
+        smsapiToken: z.string().optional(),
+        smsSenderName: z.string().max(11).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, isOwner } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !isOwner) throw new TRPCError({ code: "FORBIDDEN", message: "Tylko właściciel klubu może konfigurować SMS" });
+        
+        const { clubId, ...smsConfig } = input;
+        await db.updateClub(clubId, {
+          smsEnabled: smsConfig.smsEnabled,
+          smsProvider: smsConfig.smsProvider,
+          twilioAccountSid: smsConfig.twilioAccountSid,
+          twilioAuthToken: smsConfig.twilioAuthToken,
+          twilioPhoneNumber: smsConfig.twilioPhoneNumber,
+          smsapiToken: smsConfig.smsapiToken,
+          smsSenderName: smsConfig.smsSenderName,
+        });
+        return { success: true };
+      }),
   }),
 
   // ============================================
@@ -1131,6 +1159,65 @@ export const appRouter = router({
   }),
 
   // ============================================
+  // SUBSCRIPTIONS ROUTER
+  // ============================================
+  subscriptions: router({
+    getPlans: publicProcedure.query(async () => {
+      return db.getSubscriptionPlans();
+    }),
+    
+    getCurrentSubscription: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserSubscription(ctx.user.id);
+    }),
+    
+    createCheckoutSession: protectedProcedure
+      .input(z.object({
+        planId: z.number(),
+        billingPeriod: z.enum(['monthly', 'yearly']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Get plan details
+        const plans = await db.getSubscriptionPlans();
+        const plan = plans.find(p => p.id === input.planId);
+        if (!plan) throw new TRPCError({ code: "NOT_FOUND", message: "Plan nie znaleziony" });
+        
+        // Get Stripe keys from app settings
+        const stripeSecretKey = await db.getAppSetting('stripe_secret_key');
+        if (!stripeSecretKey?.value) {
+          throw new TRPCError({ 
+            code: "PRECONDITION_FAILED", 
+            message: "Płatności nie są skonfigurowane. Skontaktuj się z administratorem." 
+          });
+        }
+        
+        const priceId = input.billingPeriod === 'monthly' 
+          ? plan.stripePriceIdMonthly 
+          : plan.stripePriceIdYearly;
+        
+        if (!priceId) {
+          throw new TRPCError({ 
+            code: "PRECONDITION_FAILED", 
+            message: "Ten plan nie ma skonfigurowanej ceny w Stripe." 
+          });
+        }
+        
+        // Create Stripe checkout session
+        // Note: In production, you would use the Stripe SDK here
+        // For now, return a placeholder URL
+        return {
+          url: `https://checkout.stripe.com/pay/${priceId}?client_reference_id=${ctx.user.id}`,
+          sessionId: `cs_${Date.now()}`,
+        };
+      }),
+    
+    cancelSubscription: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.cancelUserSubscription(ctx.user.id);
+      await db.updateUser(ctx.user.id, { isPro: false });
+      return { success: true };
+    }),
+  }),
+
+  // ============================================
   // MASTER ADMIN ROUTER
   // ============================================
   masterAdmin: router({
@@ -1192,15 +1279,56 @@ export const appRouter = router({
     updateSubscriptionPlan: protectedProcedure
       .input(z.object({
         id: z.number(),
+        name: z.string().optional(),
+        displayName: z.string().optional(),
         stripePriceIdMonthly: z.string().optional(),
         stripePriceIdYearly: z.string().optional(),
         price: z.string().optional(),
         yearlyPrice: z.string().optional(),
+        features: z.string().optional(),
+        maxPlayers: z.number().optional(),
+        maxTeams: z.number().optional(),
+        isActive: z.boolean().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         requireMasterAdmin(ctx.user);
         const { id, ...data } = input;
         await db.updateSubscriptionPlan(id, data);
+        return { success: true };
+      }),
+    
+    createSubscriptionPlan: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        displayName: z.string(),
+        price: z.string(),
+        yearlyPrice: z.string().optional(),
+        features: z.string().optional(),
+        maxPlayers: z.number().optional(),
+        maxTeams: z.number().optional(),
+        stripePriceIdMonthly: z.string().optional(),
+        stripePriceIdYearly: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        requireMasterAdmin(ctx.user);
+        const id = await db.createSubscriptionPlan(input);
+        return { success: true, id };
+      }),
+    
+    getAppSettings: protectedProcedure.query(async ({ ctx }) => {
+      requireMasterAdmin(ctx.user);
+      return db.getAllAppSettings();
+    }),
+    
+    setAppSetting: protectedProcedure
+      .input(z.object({
+        key: z.string(),
+        value: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        requireMasterAdmin(ctx.user);
+        await db.setAppSetting(input.key, input.value, input.description, ctx.user.id);
         return { success: true };
       }),
   }),
