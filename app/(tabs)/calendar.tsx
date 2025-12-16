@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -30,6 +31,20 @@ const MONTHS_PL = [
 ];
 
 type EventType = "match" | "training";
+type CallupMode = "team" | "individual";
+
+interface Player {
+  id: number;
+  name: string;
+  teamId?: number | null;
+  position: string;
+}
+
+interface Team {
+  id: number;
+  name: string;
+  ageGroup?: string | null;
+}
 
 export default function CalendarScreen() {
   const { isAuthenticated } = useAuth();
@@ -48,11 +63,19 @@ export default function CalendarScreen() {
   const [matchTime, setMatchTime] = useState("");
   const [matchLocation, setMatchLocation] = useState("");
   const [homeAway, setHomeAway] = useState<"home" | "away">("home");
+  
+  // Callup state for match
+  const [callupMode, setCallupMode] = useState<CallupMode>("team");
+  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
 
   // Form state for training
   const [trainingTime, setTrainingTime] = useState("");
   const [trainingLocation, setTrainingLocation] = useState("");
   const [trainingNotes, setTrainingNotes] = useState("");
+  
+  // Training invitation state
+  const [invitedTeamIds, setInvitedTeamIds] = useState<number[]>([]);
 
   const { data: clubs } = trpc.clubs.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -60,6 +83,18 @@ export default function CalendarScreen() {
 
   const club = clubs?.[0];
   const { permissions } = useClubRole(club?.id);
+
+  // Get teams for the club
+  const { data: teams } = trpc.teams.list.useQuery(
+    { clubId: club?.id ?? 0 },
+    { enabled: !!club?.id }
+  );
+
+  // Get players for the club
+  const { data: players } = trpc.players.list.useQuery(
+    { clubId: club?.id ?? 0 },
+    { enabled: !!club?.id }
+  );
 
   // Get first and last day of month for calendar query
   const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -81,12 +116,26 @@ export default function CalendarScreen() {
 
   // Mutations
   const createMatch = trpc.matches.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      // Create callups for the match
+      const playerIdsToCallup = getPlayersToCallup();
+      if (playerIdsToCallup.length > 0) {
+        try {
+          await createCallups.mutateAsync({
+            matchId: data.id,
+            playerIds: playerIdsToCallup,
+            notificationChannel: "app",
+          });
+        } catch (err) {
+          console.error("Failed to create callups:", err);
+        }
+      }
+      
       utils.calendar.getEvents.invalidate();
       utils.matches.list.invalidate();
       resetForm();
       setShowAddModal(false);
-      Alert.alert("Sukces", "Mecz został dodany do kalendarza");
+      Alert.alert("Sukces", "Mecz został dodany do kalendarza z powołaniami");
     },
     onError: (error) => {
       Alert.alert("Błąd", error.message || "Nie udało się dodać meczu");
@@ -94,7 +143,23 @@ export default function CalendarScreen() {
   });
 
   const createTraining = trpc.trainings.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      // Create attendance records for invited teams
+      const playerIdsToInvite = getPlayersToInvite();
+      if (playerIdsToInvite.length > 0) {
+        try {
+          for (const playerId of playerIdsToInvite) {
+            await setTrainingAttendance.mutateAsync({
+              trainingId: data.id,
+              playerId,
+              attended: 0, // Not attended yet, just invited
+            });
+          }
+        } catch (err) {
+          console.error("Failed to create training invitations:", err);
+        }
+      }
+      
       utils.calendar.getEvents.invalidate();
       utils.trainings.list.invalidate();
       resetForm();
@@ -106,6 +171,49 @@ export default function CalendarScreen() {
     },
   });
 
+  const createCallups = trpc.callups.createForMatch.useMutation();
+  const setTrainingAttendance = trpc.trainings.setAttendance.useMutation();
+
+  // Get players to callup based on selection mode
+  const getPlayersToCallup = (): number[] => {
+    if (callupMode === "team") {
+      // Get all players from selected teams
+      if (!players) return [];
+      return players
+        .filter(p => selectedTeamIds.includes(p.teamId ?? 0))
+        .map(p => p.id);
+    } else {
+      // Return individually selected players
+      return selectedPlayerIds;
+    }
+  };
+
+  // Get players to invite to training
+  const getPlayersToInvite = (): number[] => {
+    if (!players) return [];
+    return players
+      .filter(p => invitedTeamIds.includes(p.teamId ?? 0))
+      .map(p => p.id);
+  };
+
+  // Group players by team for display
+  const playersByTeam = useMemo(() => {
+    if (!players || !teams) return new Map<number, Player[]>();
+    
+    const grouped = new Map<number, Player[]>();
+    teams.forEach(team => {
+      grouped.set(team.id, players.filter(p => p.teamId === team.id));
+    });
+    
+    // Add players without team
+    const noTeamPlayers = players.filter(p => !p.teamId);
+    if (noTeamPlayers.length > 0) {
+      grouped.set(0, noTeamPlayers);
+    }
+    
+    return grouped;
+  }, [players, teams]);
+
   const resetForm = () => {
     setOpponent("");
     setMatchTime("");
@@ -116,6 +224,10 @@ export default function CalendarScreen() {
     setTrainingNotes("");
     setEventType("match");
     setIsCreating(false);
+    setCallupMode("team");
+    setSelectedTeamIds([]);
+    setSelectedPlayerIds([]);
+    setInvitedTeamIds([]);
   };
 
   const handleAddEvent = () => {
@@ -155,6 +267,30 @@ export default function CalendarScreen() {
     }
     resetForm();
     setShowAddModal(true);
+  };
+
+  const toggleTeamSelection = (teamId: number) => {
+    if (eventType === "match") {
+      setSelectedTeamIds(prev => 
+        prev.includes(teamId) 
+          ? prev.filter(id => id !== teamId)
+          : [...prev, teamId]
+      );
+    } else {
+      setInvitedTeamIds(prev => 
+        prev.includes(teamId) 
+          ? prev.filter(id => id !== teamId)
+          : [...prev, teamId]
+      );
+    }
+  };
+
+  const togglePlayerSelection = (playerId: number) => {
+    setSelectedPlayerIds(prev => 
+      prev.includes(playerId) 
+        ? prev.filter(id => id !== playerId)
+        : [...prev, playerId]
+    );
   };
 
   // Generate calendar days
@@ -219,6 +355,13 @@ export default function CalendarScreen() {
 
   // Count events for selected date
   const eventCount = selectedDateEvents.matches.length + selectedDateEvents.trainings.length;
+
+  // Count selected players/teams for callups
+  const callupCount = callupMode === "team" 
+    ? getPlayersToCallup().length 
+    : selectedPlayerIds.length;
+
+  const inviteCount = getPlayersToInvite().length;
 
   const goToPrevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -574,6 +717,142 @@ export default function CalendarScreen() {
                       </Pressable>
                     </View>
                   </View>
+
+                  {/* Callups Section */}
+                  <View style={styles.sectionDivider}>
+                    <ThemedText style={styles.sectionTitle}>Powołania na mecz</ThemedText>
+                    <ThemedText style={styles.sectionSubtitle}>
+                      {callupCount > 0 ? `Wybrano ${callupCount} zawodników` : "Wybierz zawodników do powołania"}
+                    </ThemedText>
+                  </View>
+
+                  {/* Callup Mode Selector */}
+                  <View style={styles.callupModeSelector}>
+                    <Pressable
+                      style={[styles.callupModeBtn, callupMode === "team" && styles.callupModeBtnActive]}
+                      onPress={() => setCallupMode("team")}
+                    >
+                      <MaterialIcons
+                        name="groups"
+                        size={18}
+                        color={callupMode === "team" ? "#fff" : "#64748b"}
+                      />
+                      <ThemedText
+                        style={[styles.callupModeBtnText, callupMode === "team" && styles.callupModeBtnTextActive]}
+                      >
+                        Cały zespół
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.callupModeBtn, callupMode === "individual" && styles.callupModeBtnActive]}
+                      onPress={() => setCallupMode("individual")}
+                    >
+                      <MaterialIcons
+                        name="person"
+                        size={18}
+                        color={callupMode === "individual" ? "#fff" : "#64748b"}
+                      />
+                      <ThemedText
+                        style={[styles.callupModeBtnText, callupMode === "individual" && styles.callupModeBtnTextActive]}
+                      >
+                        Indywidualnie
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+
+                  {callupMode === "team" ? (
+                    // Team selection
+                    <View style={styles.teamList}>
+                      {teams && teams.length > 0 ? (
+                        teams.map((team) => {
+                          const teamPlayerCount = playersByTeam.get(team.id)?.length || 0;
+                          const isSelected = selectedTeamIds.includes(team.id);
+                          return (
+                            <Pressable
+                              key={team.id}
+                              style={[styles.teamItem, isSelected && styles.teamItemSelected]}
+                              onPress={() => toggleTeamSelection(team.id)}
+                            >
+                              <View style={styles.teamItemContent}>
+                                <MaterialIcons
+                                  name={isSelected ? "check-box" : "check-box-outline-blank"}
+                                  size={24}
+                                  color={isSelected ? AppColors.primary : "#64748b"}
+                                />
+                                <View style={styles.teamItemInfo}>
+                                  <ThemedText style={styles.teamItemName}>{team.name}</ThemedText>
+                                  <ThemedText style={styles.teamItemMeta}>
+                                    {team.ageGroup || "Brak kategorii"} • {teamPlayerCount} zawodników
+                                  </ThemedText>
+                                </View>
+                              </View>
+                            </Pressable>
+                          );
+                        })
+                      ) : (
+                        <ThemedText style={styles.noTeamsText}>
+                          Brak zespołów. Dodaj zespoły w sekcji Kadra.
+                        </ThemedText>
+                      )}
+                    </View>
+                  ) : (
+                    // Individual player selection
+                    <View style={styles.playerList}>
+                      {teams && teams.map((team) => {
+                        const teamPlayers = playersByTeam.get(team.id) || [];
+                        if (teamPlayers.length === 0) return null;
+                        
+                        return (
+                          <View key={team.id} style={styles.playerGroup}>
+                            <ThemedText style={styles.playerGroupTitle}>{team.name}</ThemedText>
+                            {teamPlayers.map((player) => {
+                              const isSelected = selectedPlayerIds.includes(player.id);
+                              return (
+                                <Pressable
+                                  key={player.id}
+                                  style={[styles.playerItem, isSelected && styles.playerItemSelected]}
+                                  onPress={() => togglePlayerSelection(player.id)}
+                                >
+                                  <MaterialIcons
+                                    name={isSelected ? "check-box" : "check-box-outline-blank"}
+                                    size={22}
+                                    color={isSelected ? AppColors.primary : "#64748b"}
+                                  />
+                                  <ThemedText style={styles.playerItemName}>{player.name}</ThemedText>
+                                  <ThemedText style={styles.playerItemPosition}>{player.position}</ThemedText>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        );
+                      })}
+                      
+                      {/* Players without team */}
+                      {playersByTeam.get(0) && playersByTeam.get(0)!.length > 0 && (
+                        <View style={styles.playerGroup}>
+                          <ThemedText style={styles.playerGroupTitle}>Bez zespołu</ThemedText>
+                          {playersByTeam.get(0)!.map((player) => {
+                            const isSelected = selectedPlayerIds.includes(player.id);
+                            return (
+                              <Pressable
+                                key={player.id}
+                                style={[styles.playerItem, isSelected && styles.playerItemSelected]}
+                                onPress={() => togglePlayerSelection(player.id)}
+                              >
+                                <MaterialIcons
+                                  name={isSelected ? "check-box" : "check-box-outline-blank"}
+                                  size={22}
+                                  color={isSelected ? AppColors.primary : "#64748b"}
+                                />
+                                <ThemedText style={styles.playerItemName}>{player.name}</ThemedText>
+                                <ThemedText style={styles.playerItemPosition}>{player.position}</ThemedText>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+                  )}
                 </>
               ) : (
                 <>
@@ -612,6 +891,52 @@ export default function CalendarScreen() {
                       numberOfLines={3}
                     />
                   </View>
+
+                  {/* Training Invitations Section */}
+                  <View style={styles.sectionDivider}>
+                    <ThemedText style={styles.sectionTitle}>Zaproszenia na trening</ThemedText>
+                    <ThemedText style={styles.sectionSubtitle}>
+                      {inviteCount > 0 ? `Zaproszono ${inviteCount} zawodników` : "Wybierz zespoły do zaproszenia"}
+                    </ThemedText>
+                  </View>
+
+                  <ThemedText style={styles.inviteHint}>
+                    Możesz zaprosić kilka zespołów na jeden trening
+                  </ThemedText>
+
+                  <View style={styles.teamList}>
+                    {teams && teams.length > 0 ? (
+                      teams.map((team) => {
+                        const teamPlayerCount = playersByTeam.get(team.id)?.length || 0;
+                        const isSelected = invitedTeamIds.includes(team.id);
+                        return (
+                          <Pressable
+                            key={team.id}
+                            style={[styles.teamItem, isSelected && styles.teamItemSelected]}
+                            onPress={() => toggleTeamSelection(team.id)}
+                          >
+                            <View style={styles.teamItemContent}>
+                              <MaterialIcons
+                                name={isSelected ? "check-box" : "check-box-outline-blank"}
+                                size={24}
+                                color={isSelected ? AppColors.secondary : "#64748b"}
+                              />
+                              <View style={styles.teamItemInfo}>
+                                <ThemedText style={styles.teamItemName}>{team.name}</ThemedText>
+                                <ThemedText style={styles.teamItemMeta}>
+                                  {team.ageGroup || "Brak kategorii"} • {teamPlayerCount} zawodników
+                                </ThemedText>
+                              </View>
+                            </View>
+                          </Pressable>
+                        );
+                      })
+                    ) : (
+                      <ThemedText style={styles.noTeamsText}>
+                        Brak zespołów. Dodaj zespoły w sekcji Kadra.
+                      </ThemedText>
+                    )}
+                  </View>
                 </>
               )}
             </ScrollView>
@@ -629,6 +954,8 @@ export default function CalendarScreen() {
                   <MaterialIcons name="add" size={20} color="#fff" />
                   <ThemedText style={styles.submitBtnText}>
                     Dodaj {eventType === "match" ? "mecz" : "trening"}
+                    {eventType === "match" && callupCount > 0 && ` (${callupCount} powołań)`}
+                    {eventType === "training" && inviteCount > 0 && ` (${inviteCount} zaproszeń)`}
                   </ThemedText>
                 </>
               )}
@@ -715,21 +1042,21 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   calendarContainer: {
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.md,
   },
   dayHeaders: {
     flexDirection: "row",
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   dayHeader: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
   },
   dayHeaderText: {
-    fontSize: 13,
-    color: "#64748b",
-    fontWeight: "500",
+    fontSize: 12,
+    color: "#94a3b8",
+    fontWeight: "600",
   },
   loadingContainer: {
     height: 240,
@@ -741,28 +1068,29 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   dayCell: {
-    width: "14.28%",
+    width: `${100 / 7}%`,
     aspectRatio: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderRadius: Radius.md,
+    borderRadius: Radius.sm,
   },
   todayCell: {
-    backgroundColor: AppColors.bgCard,
+    backgroundColor: AppColors.primary + "30",
   },
   selectedCell: {
     backgroundColor: AppColors.primary,
   },
   dayText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#e2e8f0",
   },
   todayText: {
     fontWeight: "bold",
+    color: AppColors.primary,
   },
   selectedText: {
-    color: "#fff",
     fontWeight: "bold",
+    color: "#fff",
   },
   eventDots: {
     flexDirection: "row",
@@ -777,23 +1105,23 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: Spacing.xl,
-    paddingVertical: Spacing.md,
+    gap: Spacing.lg,
+    paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: "#1e293b",
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   legendText: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#94a3b8",
   },
   eventsContainer: {
@@ -809,7 +1137,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   eventsTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
     color: "#fff",
     textTransform: "capitalize",
@@ -829,49 +1157,45 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   addEventBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
     color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
   },
   noEvents: {
-    backgroundColor: AppColors.bgCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.xl,
     alignItems: "center",
+    paddingVertical: Spacing.xl,
   },
   noEventsText: {
     color: "#64748b",
-    fontSize: 14,
     marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
   },
   noEventsAddBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: Spacing.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: AppColors.primary,
+    borderRadius: Radius.md,
   },
   noEventsAddBtnText: {
-    fontSize: 14,
     color: AppColors.primary,
     fontWeight: "500",
   },
   eventCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: AppColors.bgCard,
-    borderRadius: Radius.lg,
+    backgroundColor: "#1e293b",
+    borderRadius: Radius.md,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
   },
   eventIcon: {
     width: 40,
     height: 40,
-    borderRadius: Radius.md,
+    borderRadius: Radius.sm,
     justifyContent: "center",
     alignItems: "center",
     marginRight: Spacing.md,
@@ -880,37 +1204,36 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eventTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
     color: "#fff",
-    marginBottom: 2,
   },
   eventTime: {
     fontSize: 13,
     color: "#94a3b8",
+    marginTop: 2,
   },
   emptyText: {
-    fontSize: 14,
     color: "#64748b",
+    fontSize: 16,
   },
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: AppColors.bgDark,
+    backgroundColor: "#0f172a",
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
-    maxHeight: "85%",
+    maxHeight: "90%",
   },
   modalHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    padding: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: "#1e293b",
   },
@@ -922,7 +1245,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "600",
     color: "#fff",
   },
   selectedDateDisplay: {
@@ -932,40 +1255,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     backgroundColor: AppColors.primary + "10",
-    marginHorizontal: Spacing.lg,
-    marginTop: Spacing.md,
-    borderRadius: Radius.md,
   },
   selectedDateText: {
-    fontSize: 14,
+    fontSize: 15,
     color: AppColors.primary,
     fontWeight: "500",
     textTransform: "capitalize",
   },
   eventTypeSelector: {
     flexDirection: "row",
+    padding: Spacing.md,
     gap: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
   },
   eventTypeBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: Spacing.sm,
+    gap: Spacing.xs,
     paddingVertical: Spacing.md,
     borderRadius: Radius.md,
-    backgroundColor: AppColors.bgCard,
-    borderWidth: 1,
-    borderColor: "#334155",
+    backgroundColor: "#1e293b",
   },
   eventTypeBtnActive: {
     backgroundColor: AppColors.primary,
-    borderColor: AppColors.primary,
   },
   eventTypeBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
     color: "#64748b",
   },
@@ -974,27 +1290,23 @@ const styles = StyleSheet.create({
   },
   modalForm: {
     paddingHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
-    maxHeight: 300,
+    maxHeight: 400,
   },
   formGroup: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   formLabel: {
     fontSize: 14,
     fontWeight: "500",
     color: "#94a3b8",
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   formInput: {
-    backgroundColor: AppColors.bgCard,
+    backgroundColor: "#1e293b",
     borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
+    padding: Spacing.md,
     fontSize: 16,
     color: "#fff",
-    borderWidth: 1,
-    borderColor: "#334155",
   },
   formTextarea: {
     minHeight: 80,
@@ -1008,22 +1320,143 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: Spacing.md,
     borderRadius: Radius.md,
-    backgroundColor: AppColors.bgCard,
+    backgroundColor: "#1e293b",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
   },
   homeAwayBtnActive: {
-    backgroundColor: AppColors.primary + "20",
-    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary,
   },
   homeAwayBtnText: {
     fontSize: 14,
+    fontWeight: "600",
     color: "#64748b",
   },
   homeAwayBtnTextActive: {
-    color: AppColors.primary,
+    color: "#fff",
+  },
+  // Callups styles
+  sectionDivider: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: "#1e293b",
+  },
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: "600",
+    color: "#fff",
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  callupModeSelector: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  callupModeBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    backgroundColor: "#1e293b",
+  },
+  callupModeBtnActive: {
+    backgroundColor: AppColors.primary,
+  },
+  callupModeBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  callupModeBtnTextActive: {
+    color: "#fff",
+  },
+  teamList: {
+    gap: Spacing.sm,
+  },
+  teamItem: {
+    backgroundColor: "#1e293b",
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  teamItemSelected: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary + "10",
+  },
+  teamItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+  },
+  teamItemInfo: {
+    flex: 1,
+  },
+  teamItemName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  teamItemMeta: {
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  noTeamsText: {
+    color: "#64748b",
+    textAlign: "center",
+    paddingVertical: Spacing.lg,
+  },
+  playerList: {
+    gap: Spacing.md,
+  },
+  playerGroup: {
+    marginBottom: Spacing.sm,
+  },
+  playerGroupTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#94a3b8",
+    marginBottom: Spacing.sm,
+    paddingLeft: Spacing.xs,
+  },
+  playerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    backgroundColor: "#1e293b",
+    borderRadius: Radius.sm,
+    padding: Spacing.sm,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  playerItemSelected: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary + "10",
+  },
+  playerItemName: {
+    flex: 1,
+    fontSize: 14,
+    color: "#fff",
+  },
+  playerItemPosition: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  inviteHint: {
+    fontSize: 13,
+    color: "#64748b",
+    marginBottom: Spacing.md,
+    fontStyle: "italic",
   },
   submitBtn: {
     flexDirection: "row",
@@ -1032,9 +1465,9 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     backgroundColor: AppColors.primary,
     marginHorizontal: Spacing.lg,
-    marginTop: Spacing.lg,
-    paddingVertical: Spacing.lg,
-    borderRadius: Radius.lg,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
   },
   submitBtnDisabled: {
     opacity: 0.6,

@@ -216,3 +216,12 @@
 - [x] Modal/sheet to create new training from selected day
 - [x] Support multiple events per day display
 - [x] Event count indicator for selected day
+
+
+## Callups & Attendance System (Completed)
+- [x] Match callups - select whole team or individual players from different age categories (calendar.tsx)
+- [x] Training invitations - select age categories or teams (multiple groups per training)
+- [x] Match attendance tracking - mark who attended from callups (match/[id].tsx)
+- [x] Training attendance tracking - mark who attended from invited groups (training/[id].tsx)
+- [x] Player frequency statistics for trainings (player-stats/[id].tsx)
+- [x] Player frequency statistics for matches
