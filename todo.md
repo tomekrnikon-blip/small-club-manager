@@ -208,3 +208,11 @@
 - [x] Notification campaign creator with scheduling (admin/campaigns.tsx)
 - [x] Ad ROI dashboard with analytics (admin/ad-roi.tsx)
 - [x] Apple Calendar integration (apple-calendar.ts, apple-calendar-settings.tsx)
+
+
+## Calendar Event Creation (Completed)
+- [x] Day selection in calendar to show events for that day
+- [x] Modal/sheet to create new match from selected day
+- [x] Modal/sheet to create new training from selected day
+- [x] Support multiple events per day display
+- [x] Event count indicator for selected day
