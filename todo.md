@@ -119,3 +119,12 @@
 - [x] Expo push notifications hook (use-push-notifications.ts)
 - [x] Local notification helpers
 - [x] Scheduled notifications support
+
+
+## Onboarding i Dokumentacja (Completed)
+- [x] Ekrany onboardingu z przewodnikiem po funkcjach
+- [x] Animowany przycisk (AnimatedButton component)
+- [x] Dokumentacja wdrożeniowa (DEPLOYMENT.md)
+- [x] Instrukcje EAS Build dla Android i iOS
+- [x] Instrukcje publikacji w App Store i Google Play
+- [x] Konfiguracja PWA
