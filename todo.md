@@ -77,7 +77,9 @@
 - [x] Panel konfiguracji SMTP w UI (backend gotowy)
 - [x] PWA install prompt (use-pwa-install.ts, pwa-install-banner.tsx)
 - [ ] Advertising/affiliate space
-- [ ] Real-time notifications with WebSockets
+- [x] Real-time notifications with WebSockets (websocketService.ts, use-realtime.ts)
+- [x] Offline mode with data caching (offline-storage.ts, use-offline.ts)
+- [x] Offline settings screen (offline-settings.tsx)
 - [x] Advanced analytics dashboard
 
 

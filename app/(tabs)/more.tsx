@@ -171,6 +171,11 @@ export default function MoreScreen() {
             label="Pomoc"
             onPress={() => router.push("/help" as any)}
           />
+          <MenuItem
+            icon="cloud-off"
+            label="Tryb offline"
+            onPress={() => router.push("/offline-settings" as any)}
+          />
         </View>
 
         {/* Master Admin Section */}
