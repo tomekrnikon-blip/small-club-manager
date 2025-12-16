@@ -8,6 +8,7 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { addMatchToCalendar } from "@/lib/system-calendar";
 
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -186,6 +187,33 @@ export default function MatchDetailScreen() {
             </Pressable>
           </View>
         )}
+
+        {/* Add to Calendar */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Kalendarz</ThemedText>
+          <Pressable
+            style={styles.callupButton}
+            onPress={async () => {
+              const eventId = await addMatchToCalendar(
+                match.opponent,
+                new Date(match.matchDate),
+                match.matchTime,
+                match.location,
+                match.homeAway === 'home'
+              );
+              if (eventId) {
+                Alert.alert('Sukces', 'Mecz został dodany do kalendarza systemowego');
+              }
+            }}
+          >
+            <MaterialIcons name="event" size={24} color={AppColors.secondary} />
+            <View style={styles.callupInfo}>
+              <ThemedText style={styles.callupTitle}>Dodaj do kalendarza</ThemedText>
+              <ThemedText style={styles.callupHint}>Eksportuj do kalendarza iOS/Android</ThemedText>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+          </Pressable>
+        </View>
 
         {/* Notes */}
         {match.notes && (

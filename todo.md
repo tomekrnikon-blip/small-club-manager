@@ -184,3 +184,9 @@
 - [x] Extend offline caching to calendar screen
 - [x] Advertising/affiliate space component (ad-banner.tsx)
 - [x] Background push notifications with Expo (background-notifications.ts)
+
+
+## Next Improvements (In Progress)
+- [x] Notification settings screen for users (notification-preferences.tsx)
+- [x] Ad management panel in admin (admin/ads.tsx)
+- [x] System calendar integration (system-calendar.ts, match/[id].tsx, trainings.tsx)

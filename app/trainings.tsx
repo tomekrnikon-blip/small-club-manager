@@ -11,6 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
 import { useOfflineQuery } from "@/hooks/use-offline-query";
 import { OfflineIndicator } from "@/components/offline-indicator";
+import { addTrainingToCalendar } from "@/lib/system-calendar";
 
 export default function TrainingsScreen() {
   const { isAuthenticated } = useAuth();
@@ -221,6 +222,18 @@ function TrainingCard({ training }: { training: any }) {
   const trainingDate = new Date(training.trainingDate);
   const isPast = trainingDate < new Date();
 
+  const handleAddToCalendar = async () => {
+    const eventId = await addTrainingToCalendar(
+      trainingDate,
+      training.trainingTime ?? null,
+      training.location ?? null,
+      training.description ?? null
+    );
+    if (eventId) {
+      Alert.alert('Sukces', 'Trening został dodany do kalendarza');
+    }
+  };
+
   return (
     <View style={[styles.trainingCard, isPast && styles.trainingCardPast]}>
       <View style={styles.trainingLeft}>
@@ -260,6 +273,11 @@ function TrainingCard({ training }: { training: any }) {
           )}
         </View>
       </View>
+      {!isPast && (
+        <Pressable style={styles.calendarButton} onPress={handleAddToCalendar}>
+          <MaterialIcons name="event" size={20} color={AppColors.secondary} />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -318,6 +336,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     borderLeftWidth: 4,
     borderLeftColor: AppColors.secondary,
+    flexDirection: "row",
+    alignItems: "center",
   },
   trainingCardPast: {
     opacity: 0.7,
@@ -326,6 +346,16 @@ const styles = StyleSheet.create({
   trainingLeft: {
     flexDirection: "row",
     alignItems: "flex-start",
+    flex: 1,
+  },
+  calendarButton: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    backgroundColor: AppColors.secondary + "20",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: Spacing.sm,
   },
   trainingIcon: {
     width: 48,

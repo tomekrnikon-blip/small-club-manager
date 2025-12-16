@@ -478,6 +478,29 @@ export default function AdminPanelScreen() {
           
           <View style={styles.settingsSection}>
             <View style={styles.settingsSectionHeader}>
+              <MaterialIcons name="campaign" size={24} color="#f59e0b" />
+              <ThemedText style={styles.settingsSectionTitle}>Reklamy</ThemedText>
+            </View>
+            <ThemedText style={styles.settingsDescription}>
+              Zarządzaj reklamami i partnerami afiliacyjnymi wyświetlanymi w aplikacji.
+            </ThemedText>
+            <Pressable 
+              style={styles.securityLink}
+              onPress={() => router.push('/admin/ads' as any)}
+            >
+              <View style={styles.securityLinkContent}>
+                <MaterialIcons name="ads-click" size={24} color="#f59e0b" />
+                <View>
+                  <ThemedText style={styles.securityLinkTitle}>Zarządzanie reklamami</ThemedText>
+                  <ThemedText style={styles.securityLinkDesc}>Dodawaj, edytuj i monitoruj reklamy</ThemedText>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+            </Pressable>
+          </View>
+
+          <View style={styles.settingsSection}>
+            <View style={styles.settingsSectionHeader}>
               <MaterialIcons name="security" size={24} color="#22c55e" />
               <ThemedText style={styles.settingsSectionTitle}>Bezpieczeństwo</ThemedText>
             </View>

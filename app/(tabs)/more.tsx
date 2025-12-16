@@ -163,6 +163,11 @@ export default function MoreScreen() {
             onPress={() => router.push("/notifications/settings" as any)}
           />
           <MenuItem
+            icon="tune"
+            label="Ustawienia przypomnień"
+            onPress={() => router.push("/notification-preferences" as any)}
+          />
+          <MenuItem
             icon="history"
             label="Historia powiadomień"
             onPress={() => router.push("/notification-history" as any)}
