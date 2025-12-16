@@ -192,9 +192,14 @@ export const matchCallups = mysqlTable("matchCallups", {
   matchId: int("matchId").notNull(),
   playerId: int("playerId").notNull(),
   status: mysqlEnum("status", ["pending", "confirmed", "declined"]).default("pending").notNull(),
+  notified48h: boolean("notified48h").default(false).notNull(),
+  notified24h: boolean("notified24h").default(false).notNull(),
   notifiedAt: timestamp("notifiedAt"),
   respondedAt: timestamp("respondedAt"),
+  responseNote: text("responseNote"),
+  notificationChannel: mysqlEnum("notificationChannel", ["app", "email", "sms", "both"]).default("app").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type MatchCallup = typeof matchCallups.$inferSelect;
@@ -362,6 +367,30 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
+ * Scheduled notifications - for automated notification sending
+ */
+export const scheduledNotifications = mysqlTable("scheduledNotifications", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  type: mysqlEnum("type", ["callup_48h", "callup_24h", "payment_reminder", "training_reminder", "custom"]).notNull(),
+  referenceId: int("referenceId"), // matchId, trainingId, etc.
+  referenceType: mysqlEnum("referenceType", ["match", "training", "payment", "academy"]),
+  scheduledFor: timestamp("scheduledFor").notNull(),
+  status: mysqlEnum("status", ["pending", "sent", "failed", "cancelled"]).default("pending").notNull(),
+  channel: mysqlEnum("channel", ["app", "email", "sms", "both"]).default("app").notNull(),
+  recipientIds: text("recipientIds"), // JSON array of user/player IDs
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message"),
+  sentAt: timestamp("sentAt"),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ScheduledNotification = typeof scheduledNotifications.$inferSelect;
+export type InsertScheduledNotification = typeof scheduledNotifications.$inferInsert;
 
 /**
  * Subscription plans - defines available subscription tiers

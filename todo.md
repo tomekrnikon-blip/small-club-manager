@@ -47,12 +47,27 @@
 - [x] Frontend - ukrywanie sekcji na podstawie roli (Finanse, Struktura)
 - [x] Ekran akceptacji zaproszenia (/invite/[token])
 
+## Automatyczne Powiadomienia (Completed)
+- [x] Schemat bazy danych dla powołań (match_callups) - rozszerzony
+- [x] Schemat dla harmonogramu powiadomień (scheduled_notifications)
+- [x] Backend API dla powołań (createForMatch, getForMatch, getMyCallups, respond)
+- [x] Serwis powiadomień SMS (Twilio z kluczem użytkownika)
+- [x] Serwis powiadomień email (przygotowany)
+- [x] Automatyczne planowanie 48h przed meczem
+- [x] Automatyczne planowanie 24h przed meczem
+- [x] Frontend - wybór zawodników do powołania z kanałem powiadomień
+- [x] Frontend - ekran "Moje powołania" dla zawodników
+- [x] Frontend - potwierdzenie/odmowa obecności przez zawodnika
+- [x] Wybór kanału powiadomień (App/SMS/Both)
+- [x] Dokumentacja integracji zewnętrznych (docs/EXTERNAL_INTEGRATIONS.md)
+
 ## Pending Features
-- [ ] Match callup notifications (48h and 24h before) - backend integration
-- [ ] Player attendance confirmation for callups - backend integration
-- [ ] Email notifications for matches/trainings - backend integration
-- [ ] Payment reminders for academy parents - backend integration
-- [ ] Stripe API key configuration by Master Admin
+- [ ] Stripe API integration for subscription payments
+- [ ] Real SMS sending via Twilio/SMSAPI (cron job for scheduled_notifications)
+- [ ] Real email sending integration
+- [ ] Payment reminders for academy parents
 - [ ] Multi-language support (PL, EN, DE)
 - [ ] Full PDF export functionality
-- [ ] Image upload for gallery
+- [ ] Image upload for gallery (S3 integration)
+- [ ] Google Calendar integration
+- [ ] Excel data export

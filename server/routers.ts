@@ -966,6 +966,171 @@ export const appRouter = router({
   }),
 
   // ============================================
+  // CALLUPS ROUTER (Match Call-ups with Notifications)
+  // ============================================
+  callups: router({
+    // Create callups for a match with notification scheduling
+    createForMatch: protectedProcedure
+      .input(z.object({
+        matchId: z.number(),
+        playerIds: z.array(z.number()),
+        notificationChannel: z.enum(["app", "email", "sms", "both"]).default("app"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const match = await db.getMatchById(input.matchId);
+        if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "Mecz nie znaleziony" });
+        
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, match.clubId);
+        if (!hasAccess || !permissions.canManageCallups) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień do zarządzania powołaniami" });
+        }
+        
+        // Delete existing callups for this match
+        await db.deleteCallupsByMatchId(input.matchId);
+        
+        // Cancel any existing scheduled notifications for this match
+        await db.cancelScheduledNotificationsForMatch(input.matchId);
+        
+        // Create new callups
+        const callupIds = [];
+        for (const playerId of input.playerIds) {
+          const id = await db.createMatchCallup({
+            matchId: input.matchId,
+            playerId,
+            notificationChannel: input.notificationChannel,
+          });
+          callupIds.push(id);
+        }
+        
+        // Schedule notifications (48h and 24h before match)
+        const matchDate = new Date(match.matchDate);
+        const now = new Date();
+        
+        // Calculate notification times
+        const notify48h = new Date(matchDate);
+        notify48h.setHours(notify48h.getHours() - 48);
+        
+        const notify24h = new Date(matchDate);
+        notify24h.setHours(notify24h.getHours() - 24);
+        
+        const club = await db.getClubById(match.clubId);
+        const clubName = club?.name || "Klub";
+        
+        // Schedule 48h notification if it's in the future
+        if (notify48h > now) {
+          await db.createScheduledNotification({
+            clubId: match.clubId,
+            type: "callup_48h",
+            referenceId: input.matchId,
+            referenceType: "match",
+            scheduledFor: notify48h,
+            channel: input.notificationChannel,
+            recipientIds: JSON.stringify(input.playerIds),
+            title: `Powołanie na mecz za 2 dni`,
+            message: `Zostałeś powołany na mecz ${match.opponent} (${match.homeAway === "home" ? "dom" : "wyjazd"}). Potwierdź obecność.`,
+          });
+        }
+        
+        // Schedule 24h notification if it's in the future
+        if (notify24h > now) {
+          await db.createScheduledNotification({
+            clubId: match.clubId,
+            type: "callup_24h",
+            referenceId: input.matchId,
+            referenceType: "match",
+            scheduledFor: notify24h,
+            channel: input.notificationChannel,
+            recipientIds: JSON.stringify(input.playerIds),
+            title: `Przypomnienie: Mecz jutro!`,
+            message: `Przypomnienie o meczu ${match.opponent} jutro. Potwierdź obecność jeśli jeszcze tego nie zrobiłeś.`,
+          });
+        }
+        
+        return { success: true, callupIds, notificationsScheduled: (notify48h > now ? 1 : 0) + (notify24h > now ? 1 : 0) };
+      }),
+    
+    // Get callups for a match
+    getForMatch: protectedProcedure
+      .input(z.object({ matchId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const match = await db.getMatchById(input.matchId);
+        if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "Mecz nie znaleziony" });
+        
+        const { hasAccess } = await checkClubAccess(ctx.user.id, match.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        
+        return db.getCallupsWithPlayerInfo(input.matchId);
+      }),
+    
+    // Respond to callup (confirm/decline)
+    respond: protectedProcedure
+      .input(z.object({
+        callupId: z.number(),
+        status: z.enum(["confirmed", "declined"]),
+        note: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.respondToCallup(input.callupId, input.status, input.note);
+        return { success: true };
+      }),
+    
+    // Get player's callups
+    getMyCallups: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        
+        // Find player linked to this user
+        const players = await db.getPlayersByClubId(input.clubId);
+        const myPlayer = players.find(p => p.email === ctx.user.email);
+        if (!myPlayer) return [];
+        
+        const callups = await db.getPlayerCallups(myPlayer.id);
+        const result = [];
+        for (const callup of callups) {
+          const match = await db.getMatchById(callup.matchId);
+          result.push({ ...callup, match });
+        }
+        return result;
+      }),
+    
+    // Delete a callup
+    delete: protectedProcedure
+      .input(z.object({ callupId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const callup = await db.getCallupById(input.callupId);
+        if (!callup) throw new TRPCError({ code: "NOT_FOUND", message: "Powołanie nie znalezione" });
+        
+        const match = await db.getMatchById(callup.matchId);
+        if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "Mecz nie znaleziony" });
+        
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, match.clubId);
+        if (!hasAccess || !permissions.canManageCallups) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień" });
+        }
+        
+        await db.deleteCallup(input.callupId);
+        return { success: true };
+      }),
+    
+    // Get scheduled notifications for a match
+    getScheduledNotifications: protectedProcedure
+      .input(z.object({ matchId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const match = await db.getMatchById(input.matchId);
+        if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "Mecz nie znaleziony" });
+        
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, match.clubId);
+        if (!hasAccess || !permissions.canManageCallups) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        }
+        
+        return db.getScheduledNotificationsForMatch(input.matchId);
+      }),
+  }),
+
+  // ============================================
   // MASTER ADMIN ROUTER
   // ============================================
   masterAdmin: router({

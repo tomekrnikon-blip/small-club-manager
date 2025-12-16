@@ -21,6 +21,7 @@ import {
   InsertPhoto, photos,
   InsertNotification, notifications,
   InsertSubscriptionPlan, subscriptionPlans,
+  InsertScheduledNotification, scheduledNotifications,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -797,4 +798,153 @@ export async function getUserByEmail(email: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return result[0];
+}
+
+
+// ============================================
+// MATCH CALLUPS FUNCTIONS
+// ============================================
+export async function createMatchCallup(data: InsertMatchCallup) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(matchCallups).values(data);
+  return result[0].insertId;
+}
+
+export async function getCallupsByMatchId(matchId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(matchCallups).where(eq(matchCallups.matchId, matchId));
+}
+
+export async function getCallupById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(matchCallups).where(eq(matchCallups.id, id)).limit(1);
+  return result[0];
+}
+
+export async function updateCallup(id: number, data: Partial<InsertMatchCallup>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(matchCallups).set(data).where(eq(matchCallups.id, id));
+}
+
+export async function deleteCallup(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(matchCallups).where(eq(matchCallups.id, id));
+}
+
+export async function deleteCallupsByMatchId(matchId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(matchCallups).where(eq(matchCallups.matchId, matchId));
+}
+
+export async function getCallupsWithPlayerInfo(matchId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const callups = await db.select().from(matchCallups).where(eq(matchCallups.matchId, matchId));
+  const result = [];
+  for (const callup of callups) {
+    const player = await getPlayerById(callup.playerId);
+    result.push({ ...callup, player });
+  }
+  return result;
+}
+
+export async function getPlayerCallups(playerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(matchCallups).where(eq(matchCallups.playerId, playerId)).orderBy(desc(matchCallups.createdAt));
+}
+
+export async function respondToCallup(id: number, status: "confirmed" | "declined", responseNote?: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(matchCallups).set({
+    status,
+    respondedAt: new Date(),
+    responseNote: responseNote || null,
+  }).where(eq(matchCallups.id, id));
+}
+
+// ============================================
+// SCHEDULED NOTIFICATIONS FUNCTIONS
+// ============================================
+export async function createScheduledNotification(data: InsertScheduledNotification) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(scheduledNotifications).values(data);
+  return result[0].insertId;
+}
+
+export async function getScheduledNotificationsByClubId(clubId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(scheduledNotifications).where(eq(scheduledNotifications.clubId, clubId)).orderBy(desc(scheduledNotifications.scheduledFor));
+}
+
+export async function getPendingScheduledNotifications() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  return db.select().from(scheduledNotifications)
+    .where(and(
+      eq(scheduledNotifications.status, "pending"),
+      lte(scheduledNotifications.scheduledFor, now)
+    ));
+}
+
+export async function updateScheduledNotification(id: number, data: Partial<InsertScheduledNotification>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(scheduledNotifications).set(data).where(eq(scheduledNotifications.id, id));
+}
+
+export async function markScheduledNotificationSent(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(scheduledNotifications).set({
+    status: "sent",
+    sentAt: new Date(),
+  }).where(eq(scheduledNotifications.id, id));
+}
+
+export async function markScheduledNotificationFailed(id: number, errorMessage: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(scheduledNotifications).set({
+    status: "failed",
+    errorMessage,
+  }).where(eq(scheduledNotifications.id, id));
+}
+
+export async function cancelScheduledNotification(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(scheduledNotifications).set({ status: "cancelled" }).where(eq(scheduledNotifications.id, id));
+}
+
+export async function getScheduledNotificationsForMatch(matchId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(scheduledNotifications)
+    .where(and(
+      eq(scheduledNotifications.referenceId, matchId),
+      eq(scheduledNotifications.referenceType, "match")
+    ));
+}
+
+export async function cancelScheduledNotificationsForMatch(matchId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(scheduledNotifications)
+    .set({ status: "cancelled" })
+    .where(and(
+      eq(scheduledNotifications.referenceId, matchId),
+      eq(scheduledNotifications.referenceType, "match"),
+      eq(scheduledNotifications.status, "pending")
+    ));
 }

@@ -98,6 +98,11 @@ export default function MoreScreen() {
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Funkcje</ThemedText>
           <MenuItem
+            icon="sports-soccer"
+            label="Moje powołania"
+            onPress={() => router.push("/my-callups" as any)}
+          />
+          <MenuItem
             icon="fitness-center"
             label="Treningi"
             onPress={() => router.push("/trainings" as any)}
