@@ -9,6 +9,8 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useOfflineQuery } from "@/hooks/use-offline-query";
+import { OfflineIndicator } from "@/components/offline-indicator";
 
 export default function TrainingsScreen() {
   const { isAuthenticated } = useAuth();
@@ -28,9 +30,14 @@ export default function TrainingsScreen() {
 
   const club = clubs?.[0];
 
-  const { data: trainings, isLoading } = trpc.trainings.list.useQuery(
+  const trainingsQuery = trpc.trainings.list.useQuery(
     { clubId: club?.id ?? 0 },
     { enabled: !!club?.id }
+  );
+
+  const { data: trainings, isLoading, isFromCache, isStale, isOffline } = useOfflineQuery(
+    trainingsQuery,
+    { cacheKey: `trainings_${club?.id}`, enabled: !!club?.id }
   );
 
   const createMutation = trpc.trainings.create.useMutation({
@@ -96,7 +103,10 @@ export default function TrainingsScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={24} color="#fff" />
         </Pressable>
-        <ThemedText style={styles.title}>Treningi</ThemedText>
+        <View style={styles.headerCenter}>
+          <ThemedText style={styles.title}>Treningi</ThemedText>
+          <OfflineIndicator isFromCache={isFromCache} isStale={isStale} isOffline={isOffline} compact />
+        </View>
         <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
           <MaterialIcons name="add" size={24} color="#fff" />
         </Pressable>
@@ -270,6 +280,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+  },
+  headerCenter: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.md,
   },
   backButton: {
     width: 44,

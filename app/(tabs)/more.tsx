@@ -9,6 +9,7 @@ import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
 import { useClubRole } from "@/hooks/use-club-role";
+import { SponsoredSection } from "@/components/ad-banner";
 
 export default function MoreScreen() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -203,6 +204,9 @@ export default function MoreScreen() {
             <ThemedText style={styles.logoutText}>Wyloguj się</ThemedText>
           </Pressable>
         </View>
+
+        {/* Sponsored Section */}
+        <SponsoredSection />
 
         {/* App Info */}
         <View style={styles.appInfo}>

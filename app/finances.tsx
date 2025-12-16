@@ -10,6 +10,8 @@ import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
 import { useClubRole } from "@/hooks/use-club-role";
+import { useOfflineQuery } from "@/hooks/use-offline-query";
+import { OfflineIndicator } from "@/components/offline-indicator";
 
 type TransactionType = "income" | "expense";
 
@@ -37,9 +39,14 @@ export default function FinancesScreen() {
 
   const club = clubs?.[0];
 
-  const { data: transactions, isLoading } = trpc.finances.list.useQuery(
+  const transactionsQuery = trpc.finances.list.useQuery(
     { clubId: club?.id ?? 0 },
     { enabled: !!club?.id }
+  );
+
+  const { data: transactions, isLoading, isFromCache, isStale, isOffline } = useOfflineQuery(
+    transactionsQuery,
+    { cacheKey: `finances_${club?.id}`, enabled: !!club?.id }
   );
 
   const { data: summary } = trpc.finances.getSummary.useQuery(
@@ -128,7 +135,10 @@ export default function FinancesScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={24} color="#fff" />
         </Pressable>
-        <ThemedText style={styles.title}>Finanse</ThemedText>
+        <View style={styles.headerCenter}>
+          <ThemedText style={styles.title}>Finanse</ThemedText>
+          <OfflineIndicator isFromCache={isFromCache} isStale={isStale} isOffline={isOffline} compact />
+        </View>
         {permissions.canEditFinances && (
           <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
             <MaterialIcons name="add" size={24} color="#fff" />
@@ -351,6 +361,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+  },
+  headerCenter: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.md,
   },
   backButton: {
     width: 44,

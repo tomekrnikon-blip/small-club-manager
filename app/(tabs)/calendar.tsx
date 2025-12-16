@@ -9,6 +9,8 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useOfflineQuery } from "@/hooks/use-offline-query";
+import { OfflineIndicator } from "@/components/offline-indicator";
 
 const DAYS_PL = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Ndz"];
 const MONTHS_PL = [
@@ -34,13 +36,18 @@ export default function CalendarScreen() {
   const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
-  const { data: events, isLoading } = trpc.calendar.getEvents.useQuery(
+  const eventsQuery = trpc.calendar.getEvents.useQuery(
     {
       clubId: club?.id ?? 0,
       startDate: startOfMonth.toISOString(),
       endDate: endOfMonth.toISOString(),
     },
     { enabled: !!club?.id }
+  );
+
+  const { data: events, isLoading, isFromCache, isStale, isOffline } = useOfflineQuery(
+    eventsQuery,
+    { cacheKey: `calendar_${club?.id}_${currentDate.getFullYear()}_${currentDate.getMonth()}`, enabled: !!club?.id }
   );
 
   // Generate calendar days
@@ -138,7 +145,10 @@ export default function CalendarScreen() {
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={styles.title}>Kalendarz</ThemedText>
+        <View style={styles.headerLeft}>
+          <ThemedText style={styles.title}>Kalendarz</ThemedText>
+          <OfflineIndicator isFromCache={isFromCache} isStale={isStale} isOffline={isOffline} compact />
+        </View>
         <View style={styles.headerButtons}>
           <Pressable style={styles.exportButton} onPress={() => router.push('/calendar-export' as any)}>
             <MaterialIcons name="file-download" size={20} color={AppColors.primary} />
@@ -317,6 +327,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
   },
   title: {
     fontSize: 28,

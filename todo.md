@@ -176,3 +176,11 @@
 - [x] Integrate offline caching with matches list
 - [x] Notification sound option with haptic feedback (use-notification-sound.ts)
 - [x] Notification history screen (notification-history.tsx)
+
+
+## Extended Offline & Notifications (In Progress)
+- [x] Extend offline caching to trainings screen
+- [x] Extend offline caching to finances screen
+- [x] Extend offline caching to calendar screen
+- [x] Advertising/affiliate space component (ad-banner.tsx)
+- [x] Background push notifications with Expo (background-notifications.ts)
