@@ -523,6 +523,32 @@ export default function AdminPanelScreen() {
               </View>
               <MaterialIcons name="chevron-right" size={24} color="#64748b" />
             </Pressable>
+            <Pressable 
+              style={styles.securityLink}
+              onPress={() => router.push('/admin/campaigns' as any)}
+            >
+              <View style={styles.securityLinkContent}>
+                <MaterialIcons name="campaign" size={24} color="#f59e0b" />
+                <View>
+                  <ThemedText style={styles.securityLinkTitle}>Kampanie powiadomień</ThemedText>
+                  <ThemedText style={styles.securityLinkDesc}>Twórz i planuj kampanie push</ThemedText>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+            </Pressable>
+            <Pressable 
+              style={styles.securityLink}
+              onPress={() => router.push('/admin/ad-roi' as any)}
+            >
+              <View style={styles.securityLinkContent}>
+                <MaterialIcons name="insights" size={24} color="#10b981" />
+                <View>
+                  <ThemedText style={styles.securityLinkTitle}>ROI Reklam</ThemedText>
+                  <ThemedText style={styles.securityLinkDesc}>Analiza zwrotu z inwestycji reklamowych</ThemedText>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+            </Pressable>
           </View>
 
           <View style={styles.settingsSection}>

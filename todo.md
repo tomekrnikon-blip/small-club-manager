@@ -202,3 +202,9 @@
 - [x] Google Calendar API integration for two-way sync (google-calendar-sync.ts, google-calendar-settings.tsx)
 - [x] A/B testing for ads with automatic optimization (ab-testing.ts, admin/ab-testing.tsx)
 - [x] Notification segmentation by user groups (notification-segments.ts, admin/notification-segments.tsx)
+
+
+## Campaign & Analytics Features (In Progress)
+- [x] Notification campaign creator with scheduling (admin/campaigns.tsx)
+- [x] Ad ROI dashboard with analytics (admin/ad-roi.tsx)
+- [x] Apple Calendar integration (apple-calendar.ts, apple-calendar-settings.tsx)

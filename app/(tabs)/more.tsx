@@ -155,6 +155,11 @@ export default function MoreScreen() {
             label="Google Calendar"
             onPress={() => router.push("/google-calendar-settings" as any)}
           />
+          <MenuItem
+            icon="date-range"
+            label="Apple Calendar"
+            onPress={() => router.push("/apple-calendar-settings" as any)}
+          />
           {club && permissions.canEditClub && (
             <MenuItem
               icon="backup"
