@@ -1,0 +1,233 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "search": "Search",
+    "back": "Back",
+    "confirm": "Confirm",
+    "yes": "Yes",
+    "no": "No",
+    "error": "Error",
+    "success": "Success",
+    "noData": "No data",
+    "all": "All"
+  },
+  "nav": {
+    "home": "Home",
+    "players": "Squad",
+    "matches": "Matches",
+    "calendar": "Calendar",
+    "more": "More"
+  },
+  "auth": {
+    "login": "Log in",
+    "logout": "Log out",
+    "loggedAs": "Logged in as"
+  },
+  "home": {
+    "welcome": "Welcome to",
+    "appName": "Small Club Manager",
+    "subtitle": "Comprehensive sports club management",
+    "features": {
+      "players": "Player management",
+      "stats": "Match statistics",
+      "calendar": "Event calendar",
+      "finances": "Financial control",
+      "academy": "Youth academy"
+    }
+  },
+  "players": {
+    "title": "Squad",
+    "addPlayer": "Add player",
+    "searchPlaceholder": "Search player...",
+    "positions": {
+      "goalkeeper": "Goalkeeper",
+      "defender": "Defender",
+      "midfielder": "Midfielder",
+      "forward": "Forward"
+    },
+    "stats": {
+      "matches": "Matches",
+      "goals": "Goals",
+      "assists": "Assists",
+      "yellowCards": "Yellow cards",
+      "redCards": "Red cards"
+    },
+    "noPlayers": "No players",
+    "addFirst": "Add your first player"
+  },
+  "matches": {
+    "title": "Matches",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "addMatch": "Add match",
+    "noMatches": "No matches",
+    "home": "Home",
+    "away": "Away",
+    "vs": "vs",
+    "result": "Result",
+    "date": "Date",
+    "time": "Time",
+    "location": "Location"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "today": "Today",
+    "noEvents": "No events",
+    "types": {
+      "match": "Match",
+      "training": "Training",
+      "meeting": "Meeting",
+      "other": "Other"
+    }
+  },
+  "trainings": {
+    "title": "Trainings",
+    "addTraining": "Add training",
+    "noTrainings": "No trainings",
+    "attendance": "Attendance",
+    "present": "Present",
+    "absent": "Absent"
+  },
+  "finances": {
+    "title": "Finances",
+    "income": "Income",
+    "expenses": "Expenses",
+    "balance": "Balance",
+    "addTransaction": "Add transaction",
+    "noTransactions": "No transactions",
+    "categories": {
+      "membership": "Membership fees",
+      "sponsors": "Sponsors",
+      "equipment": "Equipment",
+      "travel": "Travel",
+      "other": "Other"
+    }
+  },
+  "academy": {
+    "title": "Academy",
+    "students": "Students",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "addStudent": "Add student",
+    "sendReminder": "Send reminder",
+    "noStudents": "No students"
+  },
+  "teams": {
+    "title": "Teams",
+    "addTeam": "Add team",
+    "noTeams": "No teams",
+    "categories": {
+      "senior": "Seniors",
+      "junior": "Juniors",
+      "youth": "Youth"
+    }
+  },
+  "injuries": {
+    "title": "Injuries",
+    "addInjury": "Add injury",
+    "noInjuries": "No injuries",
+    "active": "Active",
+    "healed": "Healed",
+    "expectedReturn": "Expected return"
+  },
+  "gallery": {
+    "title": "Gallery",
+    "addPhoto": "Add photo",
+    "noPhotos": "No photos",
+    "albums": {
+      "all": "All",
+      "matches": "Matches",
+      "trainings": "Trainings",
+      "team": "Team",
+      "other": "Other"
+    }
+  },
+  "reports": {
+    "title": "PDF Reports",
+    "generate": "Generate report",
+    "playerStats": "Player statistics",
+    "attendance": "Attendance report",
+    "financial": "Financial report",
+    "share": "Share"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No notifications",
+    "markAsRead": "Mark as read",
+    "settings": "Notification settings"
+  },
+  "callups": {
+    "title": "Call-ups",
+    "myCallups": "My call-ups",
+    "selectPlayers": "Select players",
+    "confirm": "Confirm",
+    "decline": "Decline",
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "declined": "Declined"
+  },
+  "clubStructure": {
+    "title": "Club structure",
+    "members": "Members",
+    "invitations": "Invitations",
+    "inviteUser": "Invite user",
+    "roles": {
+      "manager": "Manager",
+      "boardMember": "Board member",
+      "boardMemberFinance": "Board - Finance",
+      "coach": "Coach",
+      "player": "Player"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "notifications": "Notifications",
+    "account": "Account",
+    "clubSettings": "Club settings",
+    "smsConfig": "SMS configuration",
+    "emailConfig": "Email configuration"
+  },
+  "subscription": {
+    "title": "PRO Subscription",
+    "currentPlan": "Current plan",
+    "free": "Free",
+    "pro": "PRO",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "subscribe": "Subscribe",
+    "cancel": "Cancel subscription",
+    "features": {
+      "unlimited": "Unlimited players",
+      "sms": "SMS notifications",
+      "reports": "Advanced reports",
+      "support": "Priority support"
+    }
+  },
+  "admin": {
+    "title": "Admin panel",
+    "users": "Users",
+    "clubs": "Clubs",
+    "subscriptions": "Subscriptions",
+    "settings": "Settings",
+    "grantPro": "Grant PRO",
+    "revokePro": "Revoke PRO"
+  },
+  "help": {
+    "title": "Help",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "documentation": "Documentation"
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit profile",
+    "changePassword": "Change password"
+  }
+}

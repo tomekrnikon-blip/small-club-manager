@@ -75,11 +75,10 @@
 
 ## Pending Features (Future)
 - [ ] Panel konfiguracji SMTP w UI (backend gotowy)
-- [ ] Multi-language support (PL, EN, DE)
-- [ ] Google Calendar integration
-- [ ] Excel data export
 - [ ] PWA support
 - [ ] Advertising/affiliate space
+- [ ] Real-time notifications with WebSockets
+- [ ] Advanced analytics dashboard
 
 
 ## Webhook i Cron Job (Completed)
@@ -99,3 +98,15 @@
 - [x] Rzeczywiste generowanie raportów PDF (pdfService.ts)
 - [x] Reports router z generowaniem HTML
 - [x] Ekran raportów z podglądem i udostępnianiem
+
+
+## Wielojęzyczność i Integracje (Completed)
+- [x] Wielojęzyczność (i18n) - PL, EN, DE
+- [x] Pliki tłumaczeń dla każdego języka (pl.json, en.json, de.json)
+- [x] Hook useTranslation z i18next
+- [x] Wybór języka w ustawieniach
+- [x] Integracja Google Calendar (calendarService.ts)
+- [x] Eksport kalendarza do ICS
+- [x] Ekran eksportu kalendarza
+- [x] Eksport danych do CSV (excelService.ts)
+- [x] Ekran eksportu danych

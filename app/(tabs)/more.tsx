@@ -134,6 +134,16 @@ export default function MoreScreen() {
             label="Raporty PDF"
             onPress={() => router.push("/reports" as any)}
           />
+          <MenuItem
+            icon="file-download"
+            label="Eksport danych (CSV)"
+            onPress={() => router.push("/export" as any)}
+          />
+          <MenuItem
+            icon="event"
+            label="Eksport kalendarza"
+            onPress={() => router.push("/calendar-export" as any)}
+          />
         </View>
 
         {/* Settings Section */}

@@ -139,9 +139,14 @@ export default function CalendarScreen() {
       {/* Header */}
       <View style={styles.header}>
         <ThemedText style={styles.title}>Kalendarz</ThemedText>
-        <Pressable style={styles.todayButton} onPress={goToToday}>
-          <ThemedText style={styles.todayButtonText}>Dziś</ThemedText>
-        </Pressable>
+        <View style={styles.headerButtons}>
+          <Pressable style={styles.exportButton} onPress={() => router.push('/calendar-export' as any)}>
+            <MaterialIcons name="file-download" size={20} color={AppColors.primary} />
+          </Pressable>
+          <Pressable style={styles.todayButton} onPress={goToToday}>
+            <ThemedText style={styles.todayButtonText}>Dziś</ThemedText>
+          </Pressable>
+        </View>
       </View>
 
       {/* Month Navigation */}
@@ -317,6 +322,19 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
+  exportButton: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    backgroundColor: AppColors.primary + "20",
+    justifyContent: "center",
+    alignItems: "center",
   },
   todayButton: {
     backgroundColor: AppColors.primary,

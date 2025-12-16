@@ -1,0 +1,233 @@
+{
+  "common": {
+    "loading": "Ładowanie...",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "add": "Dodaj",
+    "search": "Szukaj",
+    "back": "Wstecz",
+    "confirm": "Potwierdź",
+    "yes": "Tak",
+    "no": "Nie",
+    "error": "Błąd",
+    "success": "Sukces",
+    "noData": "Brak danych",
+    "all": "Wszystkie"
+  },
+  "nav": {
+    "home": "Start",
+    "players": "Kadra",
+    "matches": "Mecze",
+    "calendar": "Kalendarz",
+    "more": "Więcej"
+  },
+  "auth": {
+    "login": "Zaloguj się",
+    "logout": "Wyloguj",
+    "loggedAs": "Zalogowany jako"
+  },
+  "home": {
+    "welcome": "Witaj w",
+    "appName": "Small Club Manager",
+    "subtitle": "Kompleksowe zarządzanie klubem sportowym",
+    "features": {
+      "players": "Zarządzanie zawodnikami",
+      "stats": "Statystyki meczowe",
+      "calendar": "Kalendarz wydarzeń",
+      "finances": "Kontrola finansów",
+      "academy": "Szkółka piłkarska"
+    }
+  },
+  "players": {
+    "title": "Kadra",
+    "addPlayer": "Dodaj zawodnika",
+    "searchPlaceholder": "Szukaj zawodnika...",
+    "positions": {
+      "goalkeeper": "Bramkarz",
+      "defender": "Obrońca",
+      "midfielder": "Pomocnik",
+      "forward": "Napastnik"
+    },
+    "stats": {
+      "matches": "Mecze",
+      "goals": "Gole",
+      "assists": "Asysty",
+      "yellowCards": "Żółte kartki",
+      "redCards": "Czerwone kartki"
+    },
+    "noPlayers": "Brak zawodników",
+    "addFirst": "Dodaj pierwszego zawodnika"
+  },
+  "matches": {
+    "title": "Mecze",
+    "upcoming": "Nadchodzące",
+    "past": "Zakończone",
+    "addMatch": "Dodaj mecz",
+    "noMatches": "Brak meczów",
+    "home": "Dom",
+    "away": "Wyjazd",
+    "vs": "vs",
+    "result": "Wynik",
+    "date": "Data",
+    "time": "Godzina",
+    "location": "Miejsce"
+  },
+  "calendar": {
+    "title": "Kalendarz",
+    "today": "Dziś",
+    "noEvents": "Brak wydarzeń",
+    "types": {
+      "match": "Mecz",
+      "training": "Trening",
+      "meeting": "Spotkanie",
+      "other": "Inne"
+    }
+  },
+  "trainings": {
+    "title": "Treningi",
+    "addTraining": "Dodaj trening",
+    "noTrainings": "Brak treningów",
+    "attendance": "Frekwencja",
+    "present": "Obecny",
+    "absent": "Nieobecny"
+  },
+  "finances": {
+    "title": "Finanse",
+    "income": "Przychody",
+    "expenses": "Wydatki",
+    "balance": "Bilans",
+    "addTransaction": "Dodaj transakcję",
+    "noTransactions": "Brak transakcji",
+    "categories": {
+      "membership": "Składki",
+      "sponsors": "Sponsorzy",
+      "equipment": "Sprzęt",
+      "travel": "Podróże",
+      "other": "Inne"
+    }
+  },
+  "academy": {
+    "title": "Szkółka",
+    "students": "Uczniowie",
+    "paid": "Opłacone",
+    "unpaid": "Nieopłacone",
+    "addStudent": "Dodaj ucznia",
+    "sendReminder": "Wyślij przypomnienie",
+    "noStudents": "Brak uczniów"
+  },
+  "teams": {
+    "title": "Zespoły",
+    "addTeam": "Dodaj zespół",
+    "noTeams": "Brak zespołów",
+    "categories": {
+      "senior": "Seniorzy",
+      "junior": "Juniorzy",
+      "youth": "Młodzież"
+    }
+  },
+  "injuries": {
+    "title": "Kontuzje",
+    "addInjury": "Dodaj kontuzję",
+    "noInjuries": "Brak kontuzji",
+    "active": "Aktywne",
+    "healed": "Wyleczone",
+    "expectedReturn": "Przewidywany powrót"
+  },
+  "gallery": {
+    "title": "Galeria",
+    "addPhoto": "Dodaj zdjęcie",
+    "noPhotos": "Brak zdjęć",
+    "albums": {
+      "all": "Wszystkie",
+      "matches": "Mecze",
+      "trainings": "Treningi",
+      "team": "Drużyna",
+      "other": "Inne"
+    }
+  },
+  "reports": {
+    "title": "Raporty PDF",
+    "generate": "Generuj raport",
+    "playerStats": "Statystyki zawodników",
+    "attendance": "Raport frekwencji",
+    "financial": "Raport finansowy",
+    "share": "Udostępnij"
+  },
+  "notifications": {
+    "title": "Powiadomienia",
+    "noNotifications": "Brak powiadomień",
+    "markAsRead": "Oznacz jako przeczytane",
+    "settings": "Ustawienia powiadomień"
+  },
+  "callups": {
+    "title": "Powołania",
+    "myCallups": "Moje powołania",
+    "selectPlayers": "Wybierz zawodników",
+    "confirm": "Potwierdzam",
+    "decline": "Odmawiam",
+    "pending": "Oczekujące",
+    "confirmed": "Potwierdzone",
+    "declined": "Odrzucone"
+  },
+  "clubStructure": {
+    "title": "Struktura klubu",
+    "members": "Członkowie",
+    "invitations": "Zaproszenia",
+    "inviteUser": "Zaproś użytkownika",
+    "roles": {
+      "manager": "Manager",
+      "boardMember": "Członek zarządu",
+      "boardMemberFinance": "Zarząd - Finanse",
+      "coach": "Trener",
+      "player": "Zawodnik"
+    }
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "language": "Język",
+    "theme": "Motyw",
+    "notifications": "Powiadomienia",
+    "account": "Konto",
+    "clubSettings": "Ustawienia klubu",
+    "smsConfig": "Konfiguracja SMS",
+    "emailConfig": "Konfiguracja Email"
+  },
+  "subscription": {
+    "title": "Subskrypcja PRO",
+    "currentPlan": "Obecny plan",
+    "free": "Darmowy",
+    "pro": "PRO",
+    "monthly": "Miesięcznie",
+    "yearly": "Rocznie",
+    "subscribe": "Subskrybuj",
+    "cancel": "Anuluj subskrypcję",
+    "features": {
+      "unlimited": "Nieograniczona liczba zawodników",
+      "sms": "Powiadomienia SMS",
+      "reports": "Zaawansowane raporty",
+      "support": "Priorytetowe wsparcie"
+    }
+  },
+  "admin": {
+    "title": "Panel administratora",
+    "users": "Użytkownicy",
+    "clubs": "Kluby",
+    "subscriptions": "Subskrypcje",
+    "settings": "Ustawienia",
+    "grantPro": "Nadaj PRO",
+    "revokePro": "Odbierz PRO"
+  },
+  "help": {
+    "title": "Pomoc",
+    "faq": "FAQ",
+    "contact": "Kontakt",
+    "documentation": "Dokumentacja"
+  },
+  "profile": {
+    "title": "Profil",
+    "editProfile": "Edytuj profil",
+    "changePassword": "Zmień hasło"
+  }
+}

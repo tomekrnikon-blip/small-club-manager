@@ -766,6 +766,79 @@ export const appRouter = router({
         if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
         return db.getCalendarEvents(input.clubId, new Date(input.startDate), new Date(input.endDate));
       }),
+    exportICS: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        startDate: z.string(),
+        endDate: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        
+        const { exportClubCalendar } = await import('./services/calendarService');
+        const icsContent = await exportClubCalendar(
+          input.clubId,
+          new Date(input.startDate),
+          new Date(input.endDate)
+        );
+        return { icsContent };
+      }),
+  }),
+
+  // ============================================
+  // EXPORTS ROUTER
+  // ============================================
+  exports: router({
+    toCSV: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        type: z.enum(['players', 'stats', 'matches', 'trainings', 'finances', 'attendance']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        
+        // Check finance permission for finance export
+        if (input.type === 'finances' && !permissions.canViewFinances) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu do finansów" });
+        }
+        
+        const excel = await import('./services/excelService');
+        let csvContent: string;
+        let filename: string;
+        
+        switch (input.type) {
+          case 'players':
+            csvContent = await excel.exportPlayersToCSV(input.clubId);
+            filename = 'zawodnicy';
+            break;
+          case 'stats':
+            csvContent = await excel.exportPlayerStatsToCSV(input.clubId);
+            filename = 'statystyki';
+            break;
+          case 'matches':
+            csvContent = await excel.exportMatchesToCSV(input.clubId);
+            filename = 'mecze';
+            break;
+          case 'trainings':
+            csvContent = await excel.exportTrainingsToCSV(input.clubId);
+            filename = 'treningi';
+            break;
+          case 'finances':
+            csvContent = await excel.exportFinancesToCSV(input.clubId);
+            filename = 'finanse';
+            break;
+          case 'attendance':
+            csvContent = await excel.exportAttendanceToCSV(input.clubId);
+            filename = 'frekwencja';
+            break;
+          default:
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Nieznany typ eksportu" });
+        }
+        
+        return { csvContent, filename };
+      }),
   }),
 
   // ============================================

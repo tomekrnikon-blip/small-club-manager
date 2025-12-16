@@ -1,0 +1,233 @@
+{
+  "common": {
+    "loading": "Laden...",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "add": "Hinzufügen",
+    "search": "Suchen",
+    "back": "Zurück",
+    "confirm": "Bestätigen",
+    "yes": "Ja",
+    "no": "Nein",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "noData": "Keine Daten",
+    "all": "Alle"
+  },
+  "nav": {
+    "home": "Start",
+    "players": "Kader",
+    "matches": "Spiele",
+    "calendar": "Kalender",
+    "more": "Mehr"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "logout": "Abmelden",
+    "loggedAs": "Angemeldet als"
+  },
+  "home": {
+    "welcome": "Willkommen bei",
+    "appName": "Small Club Manager",
+    "subtitle": "Umfassendes Sportverein-Management",
+    "features": {
+      "players": "Spielerverwaltung",
+      "stats": "Spielstatistiken",
+      "calendar": "Veranstaltungskalender",
+      "finances": "Finanzkontrolle",
+      "academy": "Jugendakademie"
+    }
+  },
+  "players": {
+    "title": "Kader",
+    "addPlayer": "Spieler hinzufügen",
+    "searchPlaceholder": "Spieler suchen...",
+    "positions": {
+      "goalkeeper": "Torwart",
+      "defender": "Verteidiger",
+      "midfielder": "Mittelfeldspieler",
+      "forward": "Stürmer"
+    },
+    "stats": {
+      "matches": "Spiele",
+      "goals": "Tore",
+      "assists": "Vorlagen",
+      "yellowCards": "Gelbe Karten",
+      "redCards": "Rote Karten"
+    },
+    "noPlayers": "Keine Spieler",
+    "addFirst": "Ersten Spieler hinzufügen"
+  },
+  "matches": {
+    "title": "Spiele",
+    "upcoming": "Kommende",
+    "past": "Vergangene",
+    "addMatch": "Spiel hinzufügen",
+    "noMatches": "Keine Spiele",
+    "home": "Heim",
+    "away": "Auswärts",
+    "vs": "vs",
+    "result": "Ergebnis",
+    "date": "Datum",
+    "time": "Uhrzeit",
+    "location": "Ort"
+  },
+  "calendar": {
+    "title": "Kalender",
+    "today": "Heute",
+    "noEvents": "Keine Ereignisse",
+    "types": {
+      "match": "Spiel",
+      "training": "Training",
+      "meeting": "Besprechung",
+      "other": "Sonstiges"
+    }
+  },
+  "trainings": {
+    "title": "Trainings",
+    "addTraining": "Training hinzufügen",
+    "noTrainings": "Keine Trainings",
+    "attendance": "Anwesenheit",
+    "present": "Anwesend",
+    "absent": "Abwesend"
+  },
+  "finances": {
+    "title": "Finanzen",
+    "income": "Einnahmen",
+    "expenses": "Ausgaben",
+    "balance": "Bilanz",
+    "addTransaction": "Transaktion hinzufügen",
+    "noTransactions": "Keine Transaktionen",
+    "categories": {
+      "membership": "Mitgliedsbeiträge",
+      "sponsors": "Sponsoren",
+      "equipment": "Ausrüstung",
+      "travel": "Reisen",
+      "other": "Sonstiges"
+    }
+  },
+  "academy": {
+    "title": "Akademie",
+    "students": "Schüler",
+    "paid": "Bezahlt",
+    "unpaid": "Unbezahlt",
+    "addStudent": "Schüler hinzufügen",
+    "sendReminder": "Erinnerung senden",
+    "noStudents": "Keine Schüler"
+  },
+  "teams": {
+    "title": "Mannschaften",
+    "addTeam": "Mannschaft hinzufügen",
+    "noTeams": "Keine Mannschaften",
+    "categories": {
+      "senior": "Senioren",
+      "junior": "Junioren",
+      "youth": "Jugend"
+    }
+  },
+  "injuries": {
+    "title": "Verletzungen",
+    "addInjury": "Verletzung hinzufügen",
+    "noInjuries": "Keine Verletzungen",
+    "active": "Aktiv",
+    "healed": "Geheilt",
+    "expectedReturn": "Erwartete Rückkehr"
+  },
+  "gallery": {
+    "title": "Galerie",
+    "addPhoto": "Foto hinzufügen",
+    "noPhotos": "Keine Fotos",
+    "albums": {
+      "all": "Alle",
+      "matches": "Spiele",
+      "trainings": "Trainings",
+      "team": "Mannschaft",
+      "other": "Sonstiges"
+    }
+  },
+  "reports": {
+    "title": "PDF-Berichte",
+    "generate": "Bericht erstellen",
+    "playerStats": "Spielerstatistiken",
+    "attendance": "Anwesenheitsbericht",
+    "financial": "Finanzbericht",
+    "share": "Teilen"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "noNotifications": "Keine Benachrichtigungen",
+    "markAsRead": "Als gelesen markieren",
+    "settings": "Benachrichtigungseinstellungen"
+  },
+  "callups": {
+    "title": "Nominierungen",
+    "myCallups": "Meine Nominierungen",
+    "selectPlayers": "Spieler auswählen",
+    "confirm": "Bestätigen",
+    "decline": "Ablehnen",
+    "pending": "Ausstehend",
+    "confirmed": "Bestätigt",
+    "declined": "Abgelehnt"
+  },
+  "clubStructure": {
+    "title": "Vereinsstruktur",
+    "members": "Mitglieder",
+    "invitations": "Einladungen",
+    "inviteUser": "Benutzer einladen",
+    "roles": {
+      "manager": "Manager",
+      "boardMember": "Vorstandsmitglied",
+      "boardMemberFinance": "Vorstand - Finanzen",
+      "coach": "Trainer",
+      "player": "Spieler"
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "theme": "Design",
+    "notifications": "Benachrichtigungen",
+    "account": "Konto",
+    "clubSettings": "Vereinseinstellungen",
+    "smsConfig": "SMS-Konfiguration",
+    "emailConfig": "E-Mail-Konfiguration"
+  },
+  "subscription": {
+    "title": "PRO-Abonnement",
+    "currentPlan": "Aktueller Plan",
+    "free": "Kostenlos",
+    "pro": "PRO",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "subscribe": "Abonnieren",
+    "cancel": "Abonnement kündigen",
+    "features": {
+      "unlimited": "Unbegrenzte Spieler",
+      "sms": "SMS-Benachrichtigungen",
+      "reports": "Erweiterte Berichte",
+      "support": "Prioritäts-Support"
+    }
+  },
+  "admin": {
+    "title": "Admin-Panel",
+    "users": "Benutzer",
+    "clubs": "Vereine",
+    "subscriptions": "Abonnements",
+    "settings": "Einstellungen",
+    "grantPro": "PRO gewähren",
+    "revokePro": "PRO entziehen"
+  },
+  "help": {
+    "title": "Hilfe",
+    "faq": "FAQ",
+    "contact": "Kontakt",
+    "documentation": "Dokumentation"
+  },
+  "profile": {
+    "title": "Profil",
+    "editProfile": "Profil bearbeiten",
+    "changePassword": "Passwort ändern"
+  }
+}
