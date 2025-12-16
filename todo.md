@@ -1,109 +1,45 @@
 # Small Club Manager - TODO
 
-## Phase 1: Setup & Branding
-- [x] Generate SKM logo (shield with soccer ball)
-- [x] Configure app branding (name, colors)
-- [x] Set up dark theme colors
-
-## Phase 2: Database Schema
-- [x] Users table with roles (admin, trener, zawodnik)
-- [x] Clubs table
-- [x] Players table
-- [x] Player stats table
-- [x] Matches table
-- [x] Match stats table
-- [x] Trainings table
-- [x] Training attendance table
-- [x] Finances table
-- [x] Finance categories table
-- [x] Teams table
-- [x] Subscription plans table
-- [x] Injuries table
-- [x] Notifications table
-
-## Phase 3: Backend API
-- [x] Auth router (login, logout, me)
-- [x] Clubs router (CRUD)
-- [x] Players router (CRUD, stats)
-- [x] Matches router (CRUD, stats)
-- [x] Trainings router (CRUD, attendance)
-- [x] Finances router (CRUD, summary, categories)
-- [x] Teams router (CRUD)
-- [x] Subscription router
-- [x] Master admin router
-- [x] Notifications router
-- [x] Calendar router
-
-## Phase 4: Authentication
-- [x] Welcome screen with login
-- [x] OAuth integration
-- [x] Session management
-- [x] Role-based access control
-
-## Phase 5: Navigation & Layout
-- [x] Bottom tab navigation (5 tabs)
-- [x] More menu (slide-up sheet)
-- [x] Header with back button
-- [x] Safe area handling
-
-## Phase 6: Dashboard (Home)
-- [x] Club header with logo
-- [x] Quick stats cards
-- [x] Recent activity list
-- [x] Quick action shortcuts
-
-## Phase 7: Players Module
-- [x] Player list with search
-- [x] Position filter (segment control)
-- [x] Player card component
-- [x] Player detail screen
-- [x] Add/edit player form
-- [x] Player stats display
-
-## Phase 8: Matches Module
-- [x] Match list (upcoming/past)
+## Completed Features
+- [x] Dashboard/Home screen with club overview
+- [x] Players list with search and filters
+- [x] Matches list with upcoming/past tabs
+- [x] Calendar view with events
+- [x] More menu with all features
+- [x] Add/Edit player screen
+- [x] Player detail screen with statistics
+- [x] Add/Edit match screen
 - [x] Match detail screen
-- [x] Add/edit match form
-- [x] Match stats display
-- [x] Call-ups placeholder
+- [x] Trainings list and management
+- [x] Finances overview with income/expenses
+- [x] Academy (Szkółka) management
+- [x] Notifications list
+- [x] Settings screen
+- [x] Subscription/PRO plans screen
+- [x] Master Admin panel with user management
+- [x] Grant/revoke PRO status
+- [x] View all users and clubs
+- [x] Create club screen
+- [x] Club detail screen
+- [x] New SKM logo (option 3 - dynamic S with ball)
+- [x] Teams management screen (Zespoły)
+- [x] Club structure screen (Struktura Klubu) - user invitations, roles
+- [x] Callups system (Powołania) - select players for matches
+- [x] Injuries module (Kontuzje) - track player injuries
+- [x] Gallery module (Galeria) - photos with albums
+- [x] PDF reports screen (Raporty PDF)
+- [x] Help screen with FAQ
+- [x] Profile screen
+- [x] Notification settings screen with SMS API config
+- [x] Club settings screen
+- [x] Back navigation button on all screens
 
-## Phase 9: Trainings Module
-- [x] Training list
-- [x] Add training form
-- [x] Training cards
-
-## Phase 10: Finances Module
-- [x] Finance dashboard
-- [x] Income vs expenses summary
-- [x] Transaction list
-- [x] Add transaction form
-
-## Phase 11: Academy Module
-- [x] Academy dashboard with stats
-- [x] Student list
-- [x] Payment status display
-
-## Phase 12: Calendar
-- [x] Monthly calendar view
-- [x] Event dots (matches/trainings)
-- [x] Day detail view
-
-## Phase 13: Settings & Admin
-- [x] User settings screen
-- [x] Notification preferences
-- [x] Master admin panel
-- [x] User management
-- [x] Grant PRO feature
-- [x] Subscription screen
-
-## Phase 14: Additional Features
-- [x] Notifications screen
-- [ ] Gallery with photo grid
-- [ ] PDF report export
-- [ ] Push notifications integration
-- [ ] Email notifications
-- [ ] SMS integration
-
-## Bugs & Issues
-(None yet)
-
+## Pending Features
+- [ ] Match callup notifications (48h and 24h before) - backend integration
+- [ ] Player attendance confirmation for callups - backend integration
+- [ ] Email notifications for matches/trainings - backend integration
+- [ ] Payment reminders for academy parents - backend integration
+- [ ] Stripe API key configuration by Master Admin
+- [ ] Multi-language support (PL, EN, DE)
+- [ ] Full PDF export functionality
+- [ ] Image upload for gallery

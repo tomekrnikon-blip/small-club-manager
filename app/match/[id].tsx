@@ -175,7 +175,7 @@ export default function MatchDetailScreen() {
             <ThemedText style={styles.sectionTitle}>Powołania</ThemedText>
             <Pressable
               style={styles.callupButton}
-              onPress={() => router.push(`/match/${matchId}/callups` as any)}
+              onPress={() => router.push({ pathname: '/callups', params: { matchId: matchId.toString() } } as any)}
             >
               <MaterialIcons name="people" size={24} color={AppColors.primary} />
               <View style={styles.callupInfo}>

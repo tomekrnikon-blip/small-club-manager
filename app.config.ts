@@ -15,7 +15,7 @@ const env = {
   appName: 'Small Club Manager',
   appSlug: 'small-club-manager',
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
-  logoUrl: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663105974624/UkKQdwWmUkdUUguT.png',
+  logoUrl: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663105974624/eCyqKctKqWPrAuCX.png',
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
   androidPackage: bundleId,

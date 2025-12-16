@@ -80,7 +80,7 @@ export default function MoreScreen() {
             <MenuItem
               icon="people"
               label="Struktura klubu"
-              onPress={() => router.push("/club/structure" as any)}
+              onPress={() => router.push("/club-structure" as any)}
             />
             <MenuItem
               icon="groups"
