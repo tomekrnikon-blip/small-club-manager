@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useState } from 'react';
 import {
   View,
@@ -9,25 +9,18 @@ import {
   Modal,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { trpc } from '@/lib/trpc';
 
 const { width } = Dimensions.get('window');
 const PHOTO_SIZE = (width - 48) / 3;
-
-// Placeholder sample photos
-const SAMPLE_PHOTOS = [
-  { id: 1, url: 'https://picsum.photos/400/400?random=1', title: 'Mecz ligowy', album: 'Mecze' },
-  { id: 2, url: 'https://picsum.photos/400/400?random=2', title: 'Trening', album: 'Treningi' },
-  { id: 3, url: 'https://picsum.photos/400/400?random=3', title: 'Drużyna', album: 'Drużyna' },
-  { id: 4, url: 'https://picsum.photos/400/400?random=4', title: 'Puchar', album: 'Mecze' },
-  { id: 5, url: 'https://picsum.photos/400/400?random=5', title: 'Rozgrzewka', album: 'Treningi' },
-  { id: 6, url: 'https://picsum.photos/400/400?random=6', title: 'Celebracja', album: 'Mecze' },
-];
 
 const ALBUMS = ['Wszystkie', 'Mecze', 'Treningi', 'Drużyna', 'Inne'];
 
@@ -35,24 +28,122 @@ export default function GalleryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [selectedAlbum, setSelectedAlbum] = useState('Wszystkie');
-  const [selectedPhoto, setSelectedPhoto] = useState<typeof SAMPLE_PHOTOS[0] | null>(null);
-  const [photos] = useState(SAMPLE_PHOTOS);
-  const [isLoading] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Get club
+  const { data: clubs } = trpc.clubs.list.useQuery();
+  const club = clubs?.[0];
+
+  // Get photos from database
+  const { data: photos = [], isLoading, refetch } = trpc.photos.list.useQuery(
+    { clubId: club?.id || 0 },
+    { enabled: !!club }
+  );
+
+  const uploadPhoto = trpc.photos.upload.useMutation({
+    onSuccess: () => {
+      refetch();
+      setIsUploading(false);
+      Alert.alert('Sukces', 'Zdjęcie zostało dodane');
+    },
+    onError: (error: any) => {
+      setIsUploading(false);
+      Alert.alert('Błąd', error.message);
+    },
+  });
+
+  const deletePhoto = trpc.photos.delete.useMutation({
+    onSuccess: () => {
+      refetch();
+      setSelectedPhoto(null);
+      Alert.alert('Sukces', 'Zdjęcie zostało usunięte');
+    },
+    onError: (error: any) => {
+      Alert.alert('Błąd', error.message);
+    },
+  });
 
   const filteredPhotos = selectedAlbum === 'Wszystkie' 
     ? photos 
-    : photos.filter(p => p.album === selectedAlbum);
+    : photos.filter((p: any) => p.description === selectedAlbum);
+
+  const handleAddPhoto = async () => {
+    // Request permission
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Błąd', 'Potrzebujemy dostępu do galerii, aby dodać zdjęcia');
+      return;
+    }
+
+    // Pick image
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0] && club) {
+      // Show album selection
+      Alert.alert(
+        'Wybierz album',
+        'Do którego albumu dodać zdjęcie?',
+        ALBUMS.filter(a => a !== 'Wszystkie').map(album => ({
+          text: album,
+          onPress: () => {
+            setIsUploading(true);
+            const asset = result.assets[0];
+            uploadPhoto.mutate({
+              clubId: club.id,
+              base64Data: asset.base64 || '',
+              fileName: `photo_${Date.now()}.jpg`,
+              contentType: 'image/jpeg',
+              albumName: album,
+              title: '',
+            });
+          },
+        }))
+      );
+    }
+  };
+
+  const handleDeletePhoto = (photo: any) => {
+    Alert.alert(
+      'Usuń zdjęcie',
+      'Czy na pewno chcesz usunąć to zdjęcie?',
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        { 
+          text: 'Usuń', 
+          style: 'destructive',
+          onPress: () => deletePhoto.mutate({ id: photo.id }),
+        },
+      ]
+    );
+  };
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#22c55e" />
         </Pressable>
         <ThemedText type="title" style={styles.headerTitle}>Galeria</ThemedText>
-        <Pressable style={styles.addButton}>
-          <Ionicons name="add" size={24} color="#22c55e" />
+        <Pressable 
+          style={styles.addButton} 
+          onPress={handleAddPhoto}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <ActivityIndicator size="small" color="#22c55e" />
+          ) : (
+            <Ionicons name="add" size={24} color="#22c55e" />
+          )}
         </Pressable>
       </View>
 
@@ -78,91 +169,78 @@ export default function GalleryScreen() {
 
       {/* Photos Grid */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={styles.centered}>
           <ActivityIndicator size="large" color="#22c55e" />
+        </View>
+      ) : filteredPhotos.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="images-outline" size={64} color="#64748b" />
+          <ThemedText style={styles.emptyText}>Brak zdjęć</ThemedText>
+          <ThemedText style={styles.emptySubtext}>
+            Dodaj pierwsze zdjęcie do galerii
+          </ThemedText>
+          <Pressable style={styles.addFirstButton} onPress={handleAddPhoto}>
+            <Ionicons name="add" size={20} color="#fff" />
+            <ThemedText style={styles.addFirstButtonText}>Dodaj zdjęcie</ThemedText>
+          </Pressable>
         </View>
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {filteredPhotos.length > 0 ? (
-            <View style={styles.photosGrid}>
-              {filteredPhotos.map((photo) => (
-                <Pressable
-                  key={photo.id}
-                  style={styles.photoItem}
-                  onPress={() => setSelectedPhoto(photo)}
-                >
-                  <Image source={{ uri: photo.url }} style={styles.photoImage} />
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="images-outline" size={64} color="#64748b" />
-              <ThemedText style={styles.emptyText}>Brak zdjęć</ThemedText>
-              <ThemedText style={styles.emptySubtext}>
-                Dodaj pierwsze zdjęcie do galerii
-              </ThemedText>
-            </View>
-          )}
+          <View style={styles.photosGrid}>
+            {filteredPhotos.map((photo: any) => (
+              <Pressable
+                key={photo.id}
+                style={styles.photoItem}
+                onPress={() => setSelectedPhoto(photo)}
+              >
+                <Image source={{ uri: photo.url }} style={styles.photoImage} />
+              </Pressable>
+            ))}
+          </View>
         </ScrollView>
       )}
 
-      {/* Photo Viewer Modal */}
+      {/* Photo Lightbox Modal */}
       <Modal
         visible={!!selectedPhoto}
+        transparent
         animationType="fade"
-        transparent={true}
         onRequestClose={() => setSelectedPhoto(null)}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.closeButton} onPress={() => setSelectedPhoto(null)}>
+        <View style={styles.lightbox}>
+          <Pressable 
+            style={styles.lightboxClose} 
+            onPress={() => setSelectedPhoto(null)}
+          >
             <Ionicons name="close" size={28} color="#fff" />
           </Pressable>
           
           {selectedPhoto && (
-            <View style={styles.photoViewer}>
+            <>
               <Image 
                 source={{ uri: selectedPhoto.url }} 
-                style={styles.fullPhoto}
+                style={styles.lightboxImage}
                 resizeMode="contain"
               />
-              <View style={styles.photoInfo}>
-                <ThemedText type="defaultSemiBold" style={styles.photoTitle}>
-                  {selectedPhoto.title}
+              <View style={styles.lightboxInfo}>
+                <ThemedText style={styles.lightboxTitle}>
+                  {selectedPhoto.title || 'Bez tytułu'}
                 </ThemedText>
-                <View style={styles.albumBadge}>
-                  <Ionicons name="folder" size={14} color="#22c55e" />
-                  <ThemedText style={styles.albumText}>{selectedPhoto.album}</ThemedText>
-                </View>
+                {selectedPhoto.description && (
+                  <ThemedText style={styles.lightboxAlbum}>
+                    Album: {selectedPhoto.description}
+                  </ThemedText>
+                )}
+                <Pressable 
+                  style={styles.deleteButton}
+                  onPress={() => handleDeletePhoto(selectedPhoto)}
+                >
+                  <Ionicons name="trash" size={20} color="#ef4444" />
+                  <ThemedText style={styles.deleteButtonText}>Usuń</ThemedText>
+                </Pressable>
               </View>
-            </View>
+            </>
           )}
-
-          {/* Navigation Arrows */}
-          <View style={styles.navArrows}>
-            <Pressable 
-              style={styles.navArrow}
-              onPress={() => {
-                const currentIndex = filteredPhotos.findIndex(p => p.id === selectedPhoto?.id);
-                if (currentIndex > 0) {
-                  setSelectedPhoto(filteredPhotos[currentIndex - 1]);
-                }
-              }}
-            >
-              <Ionicons name="chevron-back" size={32} color="#fff" />
-            </Pressable>
-            <Pressable 
-              style={styles.navArrow}
-              onPress={() => {
-                const currentIndex = filteredPhotos.findIndex(p => p.id === selectedPhoto?.id);
-                if (currentIndex < filteredPhotos.length - 1) {
-                  setSelectedPhoto(filteredPhotos[currentIndex + 1]);
-                }
-              }}
-            >
-              <Ionicons name="chevron-forward" size={32} color="#fff" />
-            </Pressable>
-          </View>
         </View>
       </Modal>
     </ThemedView>
@@ -180,14 +258,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
     fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '600',
     color: '#fff',
   },
   addButton: {
@@ -200,7 +278,6 @@ const styles = StyleSheet.create({
   },
   albumTabsContent: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
     gap: 8,
   },
   albumTab: {
@@ -208,117 +285,126 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: '#1e293b',
-    marginRight: 8,
   },
   albumTabActive: {
     backgroundColor: '#22c55e',
   },
   albumTabText: {
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
     color: '#94a3b8',
   },
   albumTabTextActive: {
     color: '#fff',
     fontWeight: '600',
   },
-  loadingContainer: {
+  content: {
+    flex: 1,
+  },
+  centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  photosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  photoItem: {
-    width: PHOTO_SIZE,
-    height: PHOTO_SIZE,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  photoImage: {
-    width: '100%',
-    height: '100%',
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
+    padding: 32,
   },
   emptyText: {
     fontSize: 18,
-    color: '#94a3b8',
+    lineHeight: 26,
+    fontWeight: '600',
+    color: '#fff',
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 14,
+    lineHeight: 20,
     color: '#64748b',
-    marginTop: 4,
+    marginTop: 8,
+    textAlign: 'center',
   },
-  modalOverlay: {
+  addFirstButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 24,
+  },
+  addFirstButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  photosGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 8,
+  },
+  photoItem: {
+    width: PHOTO_SIZE,
+    height: PHOTO_SIZE,
+    padding: 4,
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: '#1e293b',
+  },
+  lightbox: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  closeButton: {
+  lightboxClose: {
     position: 'absolute',
     top: 60,
     right: 20,
     zIndex: 10,
     padding: 8,
   },
-  photoViewer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  fullPhoto: {
+  lightboxImage: {
     width: width - 32,
     height: width - 32,
     borderRadius: 12,
   },
-  photoInfo: {
-    marginTop: 20,
+  lightboxInfo: {
+    padding: 20,
     alignItems: 'center',
   },
-  photoTitle: {
+  lightboxTitle: {
     fontSize: 18,
+    lineHeight: 26,
+    fontWeight: '600',
     color: '#fff',
   },
-  albumBadge: {
+  lightboxAlbum: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+  deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    borderRadius: 12,
+    gap: 8,
+    marginTop: 20,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
-  albumText: {
-    fontSize: 13,
-    color: '#22c55e',
-  },
-  navArrows: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-  },
-  navArrow: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  deleteButtonText: {
+    color: '#ef4444',
+    fontWeight: '500',
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

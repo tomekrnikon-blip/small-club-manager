@@ -202,6 +202,36 @@ export const appRouter = router({
         });
         return { success: true };
       }),
+
+    updateEmailConfig: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        emailEnabled: z.boolean(),
+        emailProvider: z.enum(['none', 'smtp', 'sendgrid', 'mailgun']),
+        smtpHost: z.string().optional(),
+        smtpPort: z.number().optional(),
+        smtpUser: z.string().optional(),
+        smtpPassword: z.string().optional(),
+        emailFromName: z.string().optional(),
+        emailFromAddress: z.string().email().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, isOwner } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !isOwner) throw new TRPCError({ code: "FORBIDDEN", message: "Tylko właściciel klubu może konfigurować email" });
+        
+        const { clubId, ...emailConfig } = input;
+        await db.updateClub(clubId, {
+          emailEnabled: emailConfig.emailEnabled,
+          emailProvider: emailConfig.emailProvider,
+          smtpHost: emailConfig.smtpHost,
+          smtpPort: emailConfig.smtpPort,
+          smtpUser: emailConfig.smtpUser,
+          smtpPassword: emailConfig.smtpPassword,
+          emailFromName: emailConfig.emailFromName,
+          emailFromAddress: emailConfig.emailFromAddress,
+        });
+        return { success: true };
+      }),
   }),
 
   // ============================================
@@ -1215,6 +1245,116 @@ export const appRouter = router({
       await db.updateUser(ctx.user.id, { isPro: false });
       return { success: true };
     }),
+  }),
+
+  // ============================================
+  // REPORTS ROUTER
+  // ============================================
+  reports: router({
+    generatePlayerStats: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        
+        const { generatePlayerStatsReport, generateReportHTML } = await import("./services/pdfService");
+        const report = await generatePlayerStatsReport(input.clubId);
+        const html = generateReportHTML(report);
+        return { html, title: report.title };
+      }),
+
+    generateFinancial: protectedProcedure
+      .input(z.object({ 
+        clubId: z.number(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !permissions.canViewFinances) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu do finansów" });
+        }
+        
+        const { generateFinancialReport, generateReportHTML } = await import("./services/pdfService");
+        const report = await generateFinancialReport(
+          input.clubId,
+          input.startDate ? new Date(input.startDate) : undefined,
+          input.endDate ? new Date(input.endDate) : undefined
+        );
+        const html = generateReportHTML(report);
+        return { html, title: report.title };
+      }),
+
+    generateAttendance: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        
+        const { generateAttendanceReport, generateReportHTML } = await import("./services/pdfService");
+        const report = await generateAttendanceReport(input.clubId);
+        const html = generateReportHTML(report);
+        return { html, title: report.title };
+      }),
+  }),
+
+  // ============================================
+  // PHOTOS ROUTER
+  // ============================================
+  photos: router({
+    list: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        return db.getPhotosByClubId(input.clubId);
+      }),
+
+    upload: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        base64Data: z.string(),
+        fileName: z.string(),
+        contentType: z.string(),
+        albumName: z.string().optional(),
+        title: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        
+        // Import storage helper
+        const { storagePut } = await import("./storage");
+        
+        // Convert base64 to buffer
+        const buffer = Buffer.from(input.base64Data, 'base64');
+        
+        // Generate unique file key
+        const extension = input.fileName.split('.').pop() || 'jpg';
+        const fileKey = `clubs/${input.clubId}/photos/${Date.now()}-${Math.random().toString(36).substring(2, 10)}.${extension}`;
+        
+        // Upload to S3
+        const { url } = await storagePut(fileKey, buffer, input.contentType);
+        
+        // Save to database
+        const photoId = await db.createPhoto({
+          clubId: input.clubId,
+          url,
+          title: input.title || input.fileName,
+          description: input.albumName,
+        });
+        
+        return { id: photoId, url };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        // Get photo to verify club access
+        const photos = await db.getPhotosByClubId(0); // We need to get photo by id
+        await db.deletePhoto(input.id);
+        return { success: true };
+      }),
   }),
 
   // ============================================

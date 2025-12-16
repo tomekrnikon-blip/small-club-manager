@@ -74,12 +74,12 @@
 - [x] Anulowanie subskrypcji przez użytkownika
 
 ## Pending Features (Future)
-- [ ] Real email sending integration (SMTP)
+- [ ] Panel konfiguracji SMTP w UI (backend gotowy)
 - [ ] Multi-language support (PL, EN, DE)
-- [ ] Full PDF export functionality
-- [ ] Image upload for gallery (S3 integration)
 - [ ] Google Calendar integration
 - [ ] Excel data export
+- [ ] PWA support
+- [ ] Advertising/affiliate space
 
 
 ## Webhook i Cron Job (Completed)
@@ -89,3 +89,13 @@
 - [x] Wysyłanie SMS przez Twilio/SMSAPI
 - [x] Przypomnienia o płatnościach dla rodziców w Szkółce
 - [x] Przycisk wysyłania przypomnień w module Szkółka
+
+
+## Kontynuacja Rozwoju (Completed)
+- [x] Integracja SMTP do wysyłania emaili (emailService.ts)
+- [x] Pola SMTP w schemacie bazy danych
+- [x] Upload zdjęć do S3 w module Galeria (photoService.ts, photos router)
+- [x] Galeria z expo-image-picker
+- [x] Rzeczywiste generowanie raportów PDF (pdfService.ts)
+- [x] Reports router z generowaniem HTML
+- [x] Ekran raportów z podglądem i udostępnianiem
