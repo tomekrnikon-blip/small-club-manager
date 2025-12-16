@@ -9,6 +9,8 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useOfflineQuery } from "@/hooks/use-offline-query";
+import { OfflineIndicator } from "@/components/offline-indicator";
 
 type FilterType = "all" | "upcoming" | "past";
 
@@ -24,9 +26,14 @@ export default function MatchesScreen() {
 
   const club = clubs?.[0];
 
-  const { data: matches, isLoading } = trpc.matches.list.useQuery(
+  const matchesQuery = trpc.matches.list.useQuery(
     { clubId: club?.id ?? 0 },
     { enabled: !!club?.id }
+  );
+
+  const { data: matches, isLoading, isFromCache, isStale, isOffline } = useOfflineQuery(
+    matchesQuery,
+    { cacheKey: `matches_${club?.id}`, enabled: !!club?.id }
   );
 
   const now = new Date();
@@ -64,7 +71,10 @@ export default function MatchesScreen() {
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={styles.title}>Mecze</ThemedText>
+        <View style={styles.headerLeft}>
+          <ThemedText style={styles.title}>Mecze</ThemedText>
+          <OfflineIndicator isFromCache={isFromCache} isStale={isStale} isOffline={isOffline} compact />
+        </View>
         <Pressable
           style={styles.addButton}
           onPress={() => router.push("/match/add" as any)}
@@ -247,6 +257,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
   },
   title: {
     fontSize: 28,

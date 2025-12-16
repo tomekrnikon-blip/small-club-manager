@@ -9,6 +9,8 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useOfflineQuery } from "@/hooks/use-offline-query";
+import { OfflineIndicator } from "@/components/offline-indicator";
 
 const positionColors: Record<string, string> = {
   bramkarz: AppColors.goalkeeper,
@@ -37,9 +39,14 @@ export default function PlayersScreen() {
 
   const club = clubs?.[0];
 
-  const { data: players, isLoading, refetch } = trpc.players.list.useQuery(
+  const playersQuery = trpc.players.list.useQuery(
     { clubId: club?.id ?? 0 },
     { enabled: !!club?.id }
+  );
+
+  const { data: players, isLoading, isFromCache, isStale, isOffline, refetch } = useOfflineQuery(
+    playersQuery,
+    { cacheKey: `players_${club?.id}`, enabled: !!club?.id }
   );
 
   const filteredPlayers = players?.filter((player) => {
@@ -68,7 +75,10 @@ export default function PlayersScreen() {
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText style={styles.title}>Kadra</ThemedText>
+        <View style={styles.headerLeft}>
+          <ThemedText style={styles.title}>Kadra</ThemedText>
+          <OfflineIndicator isFromCache={isFromCache} isStale={isStale} isOffline={isOffline} compact />
+        </View>
         <Pressable
           style={styles.addButton}
           onPress={() => router.push("/player/add" as any)}
@@ -245,6 +255,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
   },
   title: {
     fontSize: 28,

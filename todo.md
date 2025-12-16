@@ -169,3 +169,10 @@
 - [x] WebSocket notifications UI integration (realtime-toast.tsx)
 - [x] Sync indicator badge on More tab (sync-badge-icon.tsx)
 - [x] tRPC caching wrapper for offline support (trpc-offline.ts)
+
+
+## Enhanced Features (Completed)
+- [x] Integrate offline caching with players list (use-offline-query.ts, offline-indicator.tsx)
+- [x] Integrate offline caching with matches list
+- [x] Notification sound option with haptic feedback (use-notification-sound.ts)
+- [x] Notification history screen (notification-history.tsx)

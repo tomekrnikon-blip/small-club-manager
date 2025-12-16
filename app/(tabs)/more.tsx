@@ -162,6 +162,11 @@ export default function MoreScreen() {
             onPress={() => router.push("/notifications/settings" as any)}
           />
           <MenuItem
+            icon="history"
+            label="Historia powiadomień"
+            onPress={() => router.push("/notification-history" as any)}
+          />
+          <MenuItem
             icon="card-membership"
             label="Subskrypcja"
             onPress={() => router.push("/subscription" as any)}
