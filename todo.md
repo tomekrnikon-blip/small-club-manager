@@ -110,3 +110,12 @@
 - [x] Ekran eksportu kalendarza
 - [x] Eksport danych do CSV (excelService.ts)
 - [x] Ekran eksportu danych
+
+
+## PWA i Push Notifications (Completed)
+- [x] PWA manifest dla web (manifest.json)
+- [x] Service worker dla offline (sw.js)
+- [x] Offline page (offline.html)
+- [x] Expo push notifications hook (use-push-notifications.ts)
+- [x] Local notification helpers
+- [x] Scheduled notifications support
