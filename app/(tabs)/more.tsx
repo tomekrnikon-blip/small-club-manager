@@ -150,6 +150,11 @@ export default function MoreScreen() {
             label="Synchronizacja kalendarza"
             onPress={() => router.push("/calendar-sync" as any)}
           />
+          <MenuItem
+            icon="event"
+            label="Google Calendar"
+            onPress={() => router.push("/google-calendar-settings" as any)}
+          />
           {club && permissions.canEditClub && (
             <MenuItem
               icon="backup"

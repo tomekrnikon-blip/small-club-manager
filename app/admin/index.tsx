@@ -497,6 +497,32 @@ export default function AdminPanelScreen() {
               </View>
               <MaterialIcons name="chevron-right" size={24} color="#64748b" />
             </Pressable>
+            <Pressable 
+              style={styles.securityLink}
+              onPress={() => router.push('/admin/ab-testing' as any)}
+            >
+              <View style={styles.securityLinkContent}>
+                <MaterialIcons name="science" size={24} color="#8b5cf6" />
+                <View>
+                  <ThemedText style={styles.securityLinkTitle}>Testy A/B</ThemedText>
+                  <ThemedText style={styles.securityLinkDesc}>Testuj warianty reklam i optymalizuj CTR</ThemedText>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+            </Pressable>
+            <Pressable 
+              style={styles.securityLink}
+              onPress={() => router.push('/admin/notification-segments' as any)}
+            >
+              <View style={styles.securityLinkContent}>
+                <MaterialIcons name="segment" size={24} color="#06b6d4" />
+                <View>
+                  <ThemedText style={styles.securityLinkTitle}>Segmenty powiadomień</ThemedText>
+                  <ThemedText style={styles.securityLinkDesc}>Targetuj powiadomienia do grup użytkowników</ThemedText>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+            </Pressable>
           </View>
 
           <View style={styles.settingsSection}>

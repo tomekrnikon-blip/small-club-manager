@@ -196,3 +196,9 @@
 - [x] Bulk calendar export for all upcoming events (calendar-sync.tsx)
 - [x] Ad statistics charts over time (admin/ads.tsx)
 - [x] Sponsor push notifications (sponsor-notifications.ts, notification-preferences.tsx)
+
+
+## Advanced Features (In Progress)
+- [x] Google Calendar API integration for two-way sync (google-calendar-sync.ts, google-calendar-settings.tsx)
+- [x] A/B testing for ads with automatic optimization (ab-testing.ts, admin/ab-testing.tsx)
+- [x] Notification segmentation by user groups (notification-segments.ts, admin/notification-segments.tsx)
