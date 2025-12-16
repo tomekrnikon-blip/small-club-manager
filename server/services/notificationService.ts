@@ -5,6 +5,7 @@
  */
 
 import { getClubById, getPlayerById, getMatchById, createNotification } from "../db";
+import { decrypt } from "../utils/encryption";
 
 interface SMSConfig {
   provider: "twilio" | "smsapi" | "smslabs" | "none";
@@ -124,16 +125,18 @@ export async function sendSMS(
 
   switch (club.smsProvider) {
     case "twilio":
-      // For Twilio, smsApiKey contains auth token, we need accountSid too
-      // Format: accountSid:authToken
-      const [accountSid, authToken] = club.smsApiKey.split(":");
-      if (!accountSid || !authToken) {
-        return { success: false, channel: "sms", error: "Invalid Twilio credentials format (use accountSid:authToken)" };
+      // Decrypt Twilio credentials
+      const twilioSid = club.twilioAccountSid ? decrypt(club.twilioAccountSid) : '';
+      const twilioToken = club.twilioAuthToken ? decrypt(club.twilioAuthToken) : '';
+      if (!twilioSid || !twilioToken) {
+        return { success: false, channel: "sms", error: "Twilio credentials not configured" };
       }
-      return sendTwilioSMS(normalizedPhone, message, accountSid, authToken, club.smsSenderName || "+48000000000");
+      return sendTwilioSMS(normalizedPhone, message, twilioSid, twilioToken, club.twilioPhoneNumber || "+48000000000");
 
     case "smsapi":
-      return sendSMSAPI(normalizedPhone, message, club.smsApiKey, club.smsSenderName || "SKM");
+      // Decrypt SMSAPI token
+      const smsapiToken = club.smsapiToken ? decrypt(club.smsapiToken) : club.smsApiKey;
+      return sendSMSAPI(normalizedPhone, message, smsapiToken, club.smsSenderName || "SKM");
 
     case "smslabs":
       // SMSLabs implementation would go here

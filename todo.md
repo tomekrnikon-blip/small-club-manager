@@ -128,3 +128,14 @@
 - [x] Instrukcje EAS Build dla Android i iOS
 - [x] Instrukcje publikacji w App Store i Google Play
 - [x] Konfiguracja PWA
+
+
+## Audyt Bezpieczeństwa (Completed)
+- [x] Sprawdzenie szyfrowania haseł (JWT z HS256)
+- [x] Weryfikacja przechowywania kluczy API (AES-256-GCM)
+- [x] Bezpieczeństwo połączenia z bazą danych (SSL)
+- [x] Szyfrowanie wrażliwych danych (Twilio, SMTP)
+- [x] Walidacja danych wejściowych (Zod schemas)
+- [x] Ochrona przed SQL injection (Drizzle ORM)
+- [x] Bezpieczeństwo sesji i tokenów JWT
+- [x] Raport bezpieczeństwa (docs/SECURITY_AUDIT.md)

@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
+import { encrypt, decrypt, maskSensitive } from "./utils/encryption";
 
 // Role hierarchy and permissions
 type ClubRole = "manager" | "board_member" | "board_member_finance" | "coach" | "player";
@@ -191,13 +192,14 @@ export const appRouter = router({
         if (!hasAccess || !isOwner) throw new TRPCError({ code: "FORBIDDEN", message: "Tylko właściciel klubu może konfigurować SMS" });
         
         const { clubId, ...smsConfig } = input;
+        // Encrypt sensitive API keys before storing
         await db.updateClub(clubId, {
           smsEnabled: smsConfig.smsEnabled,
           smsProvider: smsConfig.smsProvider,
-          twilioAccountSid: smsConfig.twilioAccountSid,
-          twilioAuthToken: smsConfig.twilioAuthToken,
+          twilioAccountSid: smsConfig.twilioAccountSid ? encrypt(smsConfig.twilioAccountSid) : undefined,
+          twilioAuthToken: smsConfig.twilioAuthToken ? encrypt(smsConfig.twilioAuthToken) : undefined,
           twilioPhoneNumber: smsConfig.twilioPhoneNumber,
-          smsapiToken: smsConfig.smsapiToken,
+          smsapiToken: smsConfig.smsapiToken ? encrypt(smsConfig.smsapiToken) : undefined,
           smsSenderName: smsConfig.smsSenderName,
         });
         return { success: true };
@@ -220,13 +222,14 @@ export const appRouter = router({
         if (!hasAccess || !isOwner) throw new TRPCError({ code: "FORBIDDEN", message: "Tylko właściciel klubu może konfigurować email" });
         
         const { clubId, ...emailConfig } = input;
+        // Encrypt sensitive SMTP credentials before storing
         await db.updateClub(clubId, {
           emailEnabled: emailConfig.emailEnabled,
           emailProvider: emailConfig.emailProvider,
           smtpHost: emailConfig.smtpHost,
           smtpPort: emailConfig.smtpPort,
           smtpUser: emailConfig.smtpUser,
-          smtpPassword: emailConfig.smtpPassword,
+          smtpPassword: emailConfig.smtpPassword ? encrypt(emailConfig.smtpPassword) : undefined,
           emailFromName: emailConfig.emailFromName,
           emailFromAddress: emailConfig.emailFromAddress,
         });
