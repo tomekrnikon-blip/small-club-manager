@@ -20,6 +20,13 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
     name: "Sample User",
     loginMethod: "manus",
     role: "user",
+    isMasterAdmin: false,
+    isPro: false,
+    proGrantedBy: null,
+    proGrantedAt: null,
+    subscriptionId: null,
+    subscriptionStatus: null,
+    subscriptionPlanId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     lastSignedIn: new Date(),
@@ -29,7 +36,11 @@ function createAuthContext(): { ctx: TrpcContext; clearedCookies: CookieCall[] }
     user,
     req: {
       protocol: "https",
-      headers: {},
+      hostname: "localhost",
+      headers: {
+        host: "localhost:3000",
+      },
+      get: (name: string) => name === "host" ? "localhost:3000" : undefined,
     } as TrpcContext["req"],
     res: {
       clearCookie: (name: string, options: Record<string, unknown>) => {

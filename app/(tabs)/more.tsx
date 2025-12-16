@@ -1,0 +1,355 @@
+import { useRouter } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, View, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { AppColors, Spacing, Radius } from "@/constants/theme";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/hooks/use-auth";
+
+export default function MoreScreen() {
+  const { user, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const { data: clubs } = trpc.clubs.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const club = clubs?.[0];
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Wylogowanie",
+      "Czy na pewno chcesz się wylogować?",
+      [
+        { text: "Anuluj", style: "cancel" },
+        { text: "Wyloguj", style: "destructive", onPress: logout },
+      ]
+    );
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <ThemedView style={[styles.container, styles.centered]}>
+        <ThemedText style={styles.emptyText}>Zaloguj się, aby zobaczyć więcej opcji</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  return (
+    <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <ThemedText style={styles.title}>Więcej</ThemedText>
+        </View>
+
+        {/* User Profile Card */}
+        <Pressable
+          style={styles.profileCard}
+          onPress={() => router.push("/profile" as any)}
+        >
+          <View style={styles.profileAvatar}>
+            <MaterialIcons name="person" size={32} color={AppColors.primary} />
+          </View>
+          <View style={styles.profileInfo}>
+            <ThemedText style={styles.profileName}>{user?.name || "Użytkownik"}</ThemedText>
+            <ThemedText style={styles.profileEmail}>{user?.email || ""}</ThemedText>
+            {user?.isPro && (
+              <View style={styles.proBadge}>
+                <MaterialIcons name="star" size={12} color="#fff" />
+                <ThemedText style={styles.proText}>PRO</ThemedText>
+              </View>
+            )}
+          </View>
+          <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+        </Pressable>
+
+        {/* Club Section */}
+        {club && (
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Klub</ThemedText>
+            <MenuItem
+              icon="business"
+              label="Ustawienia klubu"
+              onPress={() => router.push("/club/settings" as any)}
+            />
+            <MenuItem
+              icon="people"
+              label="Struktura klubu"
+              onPress={() => router.push("/club/structure" as any)}
+            />
+            <MenuItem
+              icon="groups"
+              label="Drużyny"
+              onPress={() => router.push("/teams" as any)}
+            />
+          </View>
+        )}
+
+        {/* Features Section */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Funkcje</ThemedText>
+          <MenuItem
+            icon="fitness-center"
+            label="Treningi"
+            onPress={() => router.push("/trainings" as any)}
+          />
+          <MenuItem
+            icon="attach-money"
+            label="Finanse"
+            onPress={() => router.push("/finances" as any)}
+          />
+          <MenuItem
+            icon="school"
+            label="Szkółka"
+            onPress={() => router.push("/academy" as any)}
+          />
+          <MenuItem
+            icon="healing"
+            label="Kontuzje"
+            onPress={() => router.push("/injuries" as any)}
+          />
+          <MenuItem
+            icon="photo-library"
+            label="Galeria"
+            onPress={() => router.push("/gallery" as any)}
+          />
+          <MenuItem
+            icon="picture-as-pdf"
+            label="Raporty PDF"
+            onPress={() => router.push("/reports" as any)}
+          />
+        </View>
+
+        {/* Settings Section */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Ustawienia</ThemedText>
+          <MenuItem
+            icon="notifications"
+            label="Powiadomienia"
+            onPress={() => router.push("/notifications/settings" as any)}
+          />
+          <MenuItem
+            icon="card-membership"
+            label="Subskrypcja"
+            onPress={() => router.push("/subscription" as any)}
+          />
+          <MenuItem
+            icon="help"
+            label="Pomoc"
+            onPress={() => router.push("/help" as any)}
+          />
+        </View>
+
+        {/* Master Admin Section */}
+        {user?.isMasterAdmin && (
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Master Admin</ThemedText>
+            <MenuItem
+              icon="admin-panel-settings"
+              label="Panel administracyjny"
+              onPress={() => router.push("/admin" as any)}
+              highlight
+            />
+          </View>
+        )}
+
+        {/* Logout */}
+        <View style={styles.section}>
+          <Pressable style={styles.logoutButton} onPress={handleLogout}>
+            <MaterialIcons name="logout" size={20} color={AppColors.danger} />
+            <ThemedText style={styles.logoutText}>Wyloguj się</ThemedText>
+          </Pressable>
+        </View>
+
+        {/* App Info */}
+        <View style={styles.appInfo}>
+          <ThemedText style={styles.appName}>Small Club Manager</ThemedText>
+          <ThemedText style={styles.appVersion}>Wersja 1.0.0</ThemedText>
+        </View>
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </ThemedView>
+  );
+}
+
+function MenuItem({
+  icon,
+  label,
+  onPress,
+  highlight = false,
+}: {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  highlight?: boolean;
+}) {
+  return (
+    <Pressable
+      style={[styles.menuItem, highlight && styles.menuItemHighlight]}
+      onPress={onPress}
+    >
+      <View style={[styles.menuIcon, highlight && styles.menuIconHighlight]}>
+        <MaterialIcons
+          name={icon as any}
+          size={22}
+          color={highlight ? AppColors.primary : "#94a3b8"}
+        />
+      </View>
+      <ThemedText style={[styles.menuLabel, highlight && styles.menuLabelHighlight]}>
+        {label}
+      </ThemedText>
+      <MaterialIcons name="chevron-right" size={22} color="#64748b" />
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: AppColors.bgDark,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scrollContent: {
+    paddingHorizontal: Spacing.lg,
+  },
+  header: {
+    paddingVertical: Spacing.md,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  profileCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+  },
+  profileAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: Radius.full,
+    backgroundColor: AppColors.primary + "20",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.md,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#fff",
+    marginBottom: 2,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: "#94a3b8",
+  },
+  proBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: AppColors.primary,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radius.sm,
+    marginTop: Spacing.xs,
+    alignSelf: "flex-start",
+    gap: 4,
+  },
+  proText: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#fff",
+  },
+  section: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+    marginBottom: Spacing.md,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  menuItemHighlight: {
+    backgroundColor: AppColors.primary + "10",
+    borderWidth: 1,
+    borderColor: AppColors.primary + "30",
+  },
+  menuIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    backgroundColor: AppColors.bgElevated,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.md,
+  },
+  menuIconHighlight: {
+    backgroundColor: AppColors.primary + "20",
+  },
+  menuLabel: {
+    flex: 1,
+    fontSize: 16,
+    color: "#e2e8f0",
+  },
+  menuLabelHighlight: {
+    color: AppColors.primary,
+    fontWeight: "500",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: AppColors.danger + "10",
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: AppColors.danger,
+  },
+  appInfo: {
+    alignItems: "center",
+    paddingVertical: Spacing.xl,
+  },
+  appName: {
+    fontSize: 14,
+    color: "#64748b",
+    marginBottom: Spacing.xs,
+  },
+  appVersion: {
+    fontSize: 12,
+    color: "#475569",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#64748b",
+  },
+});
