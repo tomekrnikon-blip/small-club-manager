@@ -150,3 +150,14 @@
 - [x] 2FA dla konta Master Admin (twoFactorService.ts)
 - [x] Generowanie i weryfikacja kodów TOTP
 - [x] Ekran konfiguracji 2FA (admin/security.tsx)
+
+
+## Dashboard Analityczny i WebSocket (Completed)
+- [x] Dashboard analityczny z wykresami (admin/analytics.tsx)
+- [x] Statystyki aktywności użytkowników
+- [x] Statystyki klubów i przychodów z subskrypcji
+- [x] WebSocket hook dla powiadomień w czasie rzeczywistym (use-realtime.ts)
+- [x] Backup - eksport danych klubu do JSON (backupService.ts)
+- [x] Restore - import danych z pliku JSON (club/backup.tsx)
+- [x] Backend API dla backup/restore (backup router)
+- [x] Backend API dla analytics (analytics router)

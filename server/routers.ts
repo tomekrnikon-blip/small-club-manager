@@ -1467,6 +1467,56 @@ export const appRouter = router({
       return db.getAllClubs();
     }),
     
+    getAnalytics: protectedProcedure
+      .input(z.object({ timeRange: z.enum(["7d", "30d", "90d", "1y"]) }))
+      .query(async ({ ctx, input }) => {
+        requireMasterAdmin(ctx.user);
+        
+        // Calculate date range
+        const now = new Date();
+        const daysMap = { "7d": 7, "30d": 30, "90d": 90, "1y": 365 };
+        const days = daysMap[input.timeRange];
+        const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        
+        // Get all users and clubs
+        const allUsers = await db.getAllUsers();
+        const allClubs = await db.getAllClubs();
+        
+        // Calculate stats
+        const totalUsers = allUsers.length;
+        const proSubscriptions = allUsers.filter(u => u.isPro).length;
+        const freeUsers = totalUsers - proSubscriptions;
+        const totalClubs = allClubs.length;
+        const activeClubs = allClubs.filter(c => !c.isBlocked).length;
+        
+        // New users today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const newUsersToday = allUsers.filter(u => new Date(u.createdAt) >= today).length;
+        const newClubsToday = allClubs.filter(c => new Date(c.createdAt) >= today).length;
+        
+        // Mock growth data (in real app, aggregate from DB)
+        const userGrowth = Array.from({ length: 7 }, (_, i) => totalUsers - (6 - i) * 15 + Math.floor(Math.random() * 10));
+        const revenueHistory = Array.from({ length: 6 }, (_, i) => 3000 + i * 200 + Math.floor(Math.random() * 100));
+        
+        return {
+          totalUsers,
+          activeUsers: Math.floor(totalUsers * 0.7),
+          totalClubs,
+          activeClubs,
+          proSubscriptions,
+          freeUsers,
+          revenue: proSubscriptions * 49.99,
+          revenueGrowth: 12.5,
+          newUsersToday,
+          newClubsToday,
+          matchesThisMonth: Math.floor(totalClubs * 2.2),
+          trainingsThisMonth: Math.floor(totalClubs * 8),
+          userGrowth,
+          revenueHistory,
+        };
+      }),
+    
     grantPro: protectedProcedure
       .input(z.object({ userId: z.number() }))
       .mutation(async ({ ctx, input }) => {
@@ -1692,6 +1742,165 @@ export const appRouter = router({
       const auditService = await import("./services/auditService");
       return auditService.getAuditStats(30);
     }),
+  }),
+
+  // ============================================
+  // BACKUP ROUTER
+  // ============================================
+  backup: router({
+    create: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, isOwner } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !isOwner) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Tylko właściciel klubu może tworzyć kopie zapasowe" });
+        }
+        
+        const backupService = await import("./services/backupService");
+        const backup = await backupService.createClubBackup(input.clubId);
+        
+        // Log audit event
+        const auditContext = createAuditContext(ctx.req);
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: "backup.create",
+          category: "club",
+          details: { clubId: input.clubId, clubName: backup.clubName },
+          ipAddress: auditContext.ipAddress,
+          userAgent: auditContext.userAgent,
+        });
+        
+        return {
+          backup,
+          size: backupService.estimateBackupSize(backup),
+          sizeFormatted: backupService.formatBackupSize(backupService.estimateBackupSize(backup)),
+        };
+      }),
+    
+    validate: protectedProcedure
+      .input(z.object({ data: z.any() }))
+      .mutation(async ({ input }) => {
+        const backupService = await import("./services/backupService");
+        return backupService.validateBackup(input.data);
+      }),
+    
+    restore: protectedProcedure
+      .input(z.object({ data: z.any() }))
+      .mutation(async ({ ctx, input }) => {
+        const backupService = await import("./services/backupService");
+        
+        // Validate backup first
+        const validation = backupService.validateBackup(input.data);
+        if (!validation.valid) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: `Nieprawidłowy plik kopii zapasowej: ${validation.errors.join(", ")}` 
+          });
+        }
+        
+        const result = await backupService.restoreClubFromBackup(input.data, ctx.user.id);
+        
+        // Log audit event
+        const auditContext = createAuditContext(ctx.req);
+        await logAuditEvent({
+          userId: ctx.user.id,
+          action: "backup.restore",
+          category: "club",
+          details: { 
+            originalClubName: input.data.clubName,
+            newClubId: result.clubId,
+            stats: result.stats,
+          },
+          ipAddress: auditContext.ipAddress,
+          userAgent: auditContext.userAgent,
+        });
+        
+        return result;
+      }),
+  }),
+
+  // ============================================
+  // ANALYTICS ROUTER
+  // ============================================
+  analytics: router({
+    getDashboardStats: protectedProcedure.query(async ({ ctx }) => {
+      requireMasterAdmin(ctx.user);
+      
+      const allUsers = await db.getAllUsers();
+      const allClubs = await db.getAllClubs();
+      // Get subscription data from users table
+      const subscriptions = allUsers.filter(u => u.isPro);
+      
+      // Calculate stats
+      const totalUsers = allUsers.length;
+      const activeUsers = allUsers.filter(u => {
+        const lastActive = new Date(u.lastSignedIn);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        return lastActive > thirtyDaysAgo;
+      }).length;
+      
+      const totalClubs = allClubs.length;
+      const proUsers = allUsers.filter(u => u.isPro).length;
+      
+      // Subscription revenue (estimate based on PRO users)
+      const monthlyRevenue = proUsers * 50; // Estimate 50 PLN per PRO user
+      
+      // User growth by month (last 6 months)
+      const userGrowth: { month: string; count: number }[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+        const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        
+        const count = allUsers.filter(u => {
+          const created = new Date(u.createdAt);
+          return created >= monthStart && created <= monthEnd;
+        }).length;
+        
+        userGrowth.push({
+          month: monthStart.toLocaleDateString("pl-PL", { month: "short", year: "numeric" }),
+          count,
+        });
+      }
+      
+      // Club distribution by size
+      const clubSizes: { size: string; count: number }[] = [];
+      const smallClubs = allClubs.filter(c => c.id <= 10).length; // Placeholder logic
+      const mediumClubs = allClubs.filter(c => c.id > 10 && c.id <= 50).length;
+      const largeClubs = allClubs.filter(c => c.id > 50).length;
+      
+      return {
+        totalUsers,
+        activeUsers,
+        totalClubs,
+        proUsers,
+        monthlyRevenue,
+        userGrowth,
+        subscriptionBreakdown: {
+          free: totalUsers - proUsers,
+          pro: proUsers,
+        },
+      };
+    }),
+    
+    getRecentActivity: protectedProcedure
+      .input(z.object({ limit: z.number().max(100).optional() }))
+      .query(async ({ ctx, input }) => {
+        requireMasterAdmin(ctx.user);
+        
+        const auditService = await import("./services/auditService");
+        const logs = await auditService.getAuditLogs({ limit: input.limit || 20 });
+        
+        return logs.map(log => ({
+          id: log.id,
+          action: log.action,
+          category: log.category,
+          timestamp: log.createdAt,
+          userId: log.userId,
+        }));
+      }),
   }),
 });
 

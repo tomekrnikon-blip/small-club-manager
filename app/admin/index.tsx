@@ -455,6 +455,29 @@ export default function AdminPanelScreen() {
           {/* Security Section */}
           <View style={styles.settingsSection}>
             <View style={styles.settingsSectionHeader}>
+              <MaterialIcons name="analytics" size={24} color="#3b82f6" />
+              <ThemedText style={styles.settingsSectionTitle}>Analityka</ThemedText>
+            </View>
+            <ThemedText style={styles.settingsDescription}>
+              Przeglądaj statystyki użytkowników, klubów i przychodów.
+            </ThemedText>
+            <Pressable 
+              style={styles.securityLink}
+              onPress={() => router.push('/admin/analytics' as any)}
+            >
+              <View style={styles.securityLinkContent}>
+                <MaterialIcons name="bar-chart" size={24} color="#3b82f6" />
+                <View>
+                  <ThemedText style={styles.securityLinkTitle}>Dashboard Analityczny</ThemedText>
+                  <ThemedText style={styles.securityLinkDesc}>Wykresy, statystyki, przychody</ThemedText>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+            </Pressable>
+          </View>
+          
+          <View style={styles.settingsSection}>
+            <View style={styles.settingsSectionHeader}>
               <MaterialIcons name="security" size={24} color="#22c55e" />
               <ThemedText style={styles.settingsSectionTitle}>Bezpieczeństwo</ThemedText>
             </View>

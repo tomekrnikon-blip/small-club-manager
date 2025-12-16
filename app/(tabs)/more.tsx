@@ -144,6 +144,13 @@ export default function MoreScreen() {
             label="Eksport kalendarza"
             onPress={() => router.push("/calendar-export" as any)}
           />
+          {club && permissions.canEditClub && (
+            <MenuItem
+              icon="backup"
+              label="Kopia zapasowa"
+              onPress={() => router.push({ pathname: "/club/backup", params: { clubId: club.id.toString() } } as any)}
+            />
+          )}
         </View>
 
         {/* Settings Section */}
