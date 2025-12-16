@@ -553,3 +553,67 @@ export const userSubscriptionsRelations = relations(userSubscriptions, ({ one })
   plan: one(subscriptionPlans, { fields: [userSubscriptions.planId], references: [subscriptionPlans.id] }),
   granter: one(users, { fields: [userSubscriptions.grantedBy], references: [users.id] }),
 }));
+
+
+/**
+ * Audit logs - tracks sensitive operations for security monitoring
+ */
+export const auditLogs = mysqlTable("auditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  userEmail: varchar("userEmail", { length: 320 }),
+  action: varchar("action", { length: 100 }).notNull(),
+  category: mysqlEnum("category", ["auth", "club", "member", "finance", "config", "admin", "subscription"]).default("admin").notNull(),
+  targetType: varchar("targetType", { length: 50 }), // e.g., "club", "user", "player"
+  targetId: int("targetId"),
+  details: text("details"), // JSON with additional context
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+  status: mysqlEnum("status", ["success", "failure", "warning"]).default("success").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
+}));
+
+/**
+ * Rate limits - tracks API usage for rate limiting
+ */
+export const rateLimits = mysqlTable("rateLimits", {
+  id: int("id").autoincrement().primaryKey(),
+  identifier: varchar("identifier", { length: 255 }).notNull(), // userId, IP, or clubId
+  endpoint: varchar("endpoint", { length: 100 }).notNull(),
+  count: int("count").default(0).notNull(),
+  windowStart: timestamp("windowStart").defaultNow().notNull(),
+  windowEnd: timestamp("windowEnd").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RateLimit = typeof rateLimits.$inferSelect;
+export type InsertRateLimit = typeof rateLimits.$inferInsert;
+
+/**
+ * Two-factor authentication - stores 2FA secrets for users
+ */
+export const twoFactorAuth = mysqlTable("twoFactorAuth", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  secret: varchar("secret", { length: 255 }).notNull(), // Encrypted TOTP secret
+  isEnabled: boolean("isEnabled").default(false).notNull(),
+  backupCodes: text("backupCodes"), // Encrypted JSON array of backup codes
+  lastUsedAt: timestamp("lastUsedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TwoFactorAuth = typeof twoFactorAuth.$inferSelect;
+export type InsertTwoFactorAuth = typeof twoFactorAuth.$inferInsert;
+
+export const twoFactorAuthRelations = relations(twoFactorAuth, ({ one }) => ({
+  user: one(users, { fields: [twoFactorAuth.userId], references: [users.id] }),
+}));

@@ -139,3 +139,14 @@
 - [x] Ochrona przed SQL injection (Drizzle ORM)
 - [x] Bezpieczeństwo sesji i tokenów JWT
 - [x] Raport bezpieczeństwa (docs/SECURITY_AUDIT.md)
+
+
+## Zaawansowane Bezpieczeństwo (Completed)
+- [x] Audit log - tabela w bazie danych (audit_logs)
+- [x] Logowanie wrażliwych operacji (zmiany ról, konfiguracji)
+- [x] Ekran przeglądania logów w panelu Master Admin (admin/audit-logs.tsx)
+- [x] Rate limiting na endpointy SMS (rateLimitService.ts)
+- [x] Rate limiting na endpointy logowania
+- [x] 2FA dla konta Master Admin (twoFactorService.ts)
+- [x] Generowanie i weryfikacja kodów TOTP
+- [x] Ekran konfiguracji 2FA (admin/security.tsx)

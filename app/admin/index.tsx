@@ -452,6 +452,30 @@ export default function AdminPanelScreen() {
       {/* Settings Tab */}
       {activeTab === 'settings' && (
         <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Security Section */}
+          <View style={styles.settingsSection}>
+            <View style={styles.settingsSectionHeader}>
+              <MaterialIcons name="security" size={24} color="#22c55e" />
+              <ThemedText style={styles.settingsSectionTitle}>Bezpieczeństwo</ThemedText>
+            </View>
+            <ThemedText style={styles.settingsDescription}>
+              Zarządzaj dwuskładnikowym uwierzytelnianiem (2FA) i przeglądaj logi audytu.
+            </ThemedText>
+            <Pressable 
+              style={styles.securityLink}
+              onPress={() => router.push('/admin/security' as any)}
+            >
+              <View style={styles.securityLinkContent}>
+                <MaterialIcons name="shield" size={24} color="#22c55e" />
+                <View>
+                  <ThemedText style={styles.securityLinkTitle}>2FA i Logi Audytu</ThemedText>
+                  <ThemedText style={styles.securityLinkDesc}>Włącz 2FA, przeglądaj historię działań</ThemedText>
+                </View>
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+            </Pressable>
+          </View>
+
           <View style={styles.settingsSection}>
             <View style={styles.settingsSectionHeader}>
               <MaterialIcons name="credit-card" size={24} color="#22c55e" />
@@ -1295,5 +1319,31 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#fff',
     fontWeight: '600',
+  },
+  securityLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1e293b',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+  },
+  securityLinkContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  securityLinkTitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  securityLinkDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#94a3b8',
+    marginTop: 2,
   },
 });

@@ -6,6 +6,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { encrypt, decrypt, maskSensitive } from "./utils/encryption";
+import { logAuditEvent, AuditActions, createAuditContext } from "./services/auditService";
+import { checkRateLimit, createRateLimitIdentifier, getRateLimitHeaders } from "./services/rateLimitService";
 
 // Role hierarchy and permissions
 type ClubRole = "manager" | "board_member" | "board_member_finance" | "coach" | "player";
@@ -908,6 +910,13 @@ export const appRouter = router({
         const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').substring(0, 32);
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
         
+        // Rate limit check
+        const rateLimitId = createRateLimitIdentifier({ clubId: input.clubId });
+        const rateCheck = await checkRateLimit(rateLimitId, "invitation.send");
+        if (!rateCheck.allowed) {
+          throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Zbyt wiele zaproszeń. Spróbuj za ${rateCheck.retryAfter} sekund.` });
+        }
+        
         const id = await db.createInvitation({
           clubId: input.clubId,
           email: input.email,
@@ -915,6 +924,17 @@ export const appRouter = router({
           token,
           invitedBy: ctx.user.id,
           expiresAt,
+        });
+        
+        // Audit log
+        await logAuditEvent({
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || undefined,
+          action: AuditActions.MEMBER_INVITED,
+          category: "member",
+          targetType: "invitation",
+          targetId: id,
+          details: { clubId: input.clubId, invitedEmail: input.email, role: input.role },
         });
         
         return { id, token };
@@ -1456,6 +1476,18 @@ export const appRouter = router({
           proGrantedBy: ctx.user.id,
           proGrantedAt: new Date(),
         });
+        
+        // Audit log
+        await logAuditEvent({
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || undefined,
+          action: AuditActions.USER_PRO_GRANTED,
+          category: "admin",
+          targetType: "user",
+          targetId: input.userId,
+          details: { grantedBy: ctx.user.id },
+        });
+        
         return { success: true };
       }),
     
@@ -1467,6 +1499,17 @@ export const appRouter = router({
           isPro: false,
           proGrantedBy: null,
           proGrantedAt: null,
+        });
+        
+        // Audit log
+        await logAuditEvent({
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || undefined,
+          action: AuditActions.USER_PRO_REVOKED,
+          category: "admin",
+          targetType: "user",
+          targetId: input.userId,
+          details: { revokedBy: ctx.user.id },
         });
         return { success: true };
       }),
@@ -1547,6 +1590,108 @@ export const appRouter = router({
         await db.setAppSetting(input.key, input.value, input.description, ctx.user.id);
         return { success: true };
       }),
+    
+    // 2FA endpoints
+    setup2FA: protectedProcedure.mutation(async ({ ctx }) => {
+      requireMasterAdmin(ctx.user);
+      const twoFactorService = await import("./services/twoFactorService");
+      const result = await twoFactorService.enable2FA(ctx.user.id);
+      return result;
+    }),
+    
+    verify2FA: protectedProcedure
+      .input(z.object({ code: z.string().length(6) }))
+      .mutation(async ({ ctx, input }) => {
+        requireMasterAdmin(ctx.user);
+        const twoFactorService = await import("./services/twoFactorService");
+        const success = await twoFactorService.verify2FA(ctx.user.id, input.code);
+        
+        if (success) {
+          await logAuditEvent({
+            userId: ctx.user.id,
+            userEmail: ctx.user.email || undefined,
+            action: AuditActions.TWO_FACTOR_ENABLED,
+            category: "auth",
+            targetType: "user",
+            targetId: ctx.user.id,
+          });
+        }
+        
+        return { success };
+      }),
+    
+    disable2FA: protectedProcedure
+      .input(z.object({ code: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        requireMasterAdmin(ctx.user);
+        const twoFactorService = await import("./services/twoFactorService");
+        
+        // Verify code before disabling
+        const isValid = await twoFactorService.verify2FALogin(ctx.user.id, input.code);
+        if (!isValid) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Nieprawidłowy kod 2FA" });
+        }
+        
+        await twoFactorService.disable2FA(ctx.user.id);
+        
+        await logAuditEvent({
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || undefined,
+          action: AuditActions.TWO_FACTOR_DISABLED,
+          category: "auth",
+          targetType: "user",
+          targetId: ctx.user.id,
+        });
+        
+        return { success: true };
+      }),
+    
+    get2FAStatus: protectedProcedure.query(async ({ ctx }) => {
+      requireMasterAdmin(ctx.user);
+      const twoFactorService = await import("./services/twoFactorService");
+      const isEnabled = await twoFactorService.is2FAEnabled(ctx.user.id);
+      const backupCodesCount = await twoFactorService.getBackupCodesCount(ctx.user.id);
+      return { isEnabled, backupCodesCount };
+    }),
+    
+    regenerateBackupCodes: protectedProcedure
+      .input(z.object({ code: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        requireMasterAdmin(ctx.user);
+        const twoFactorService = await import("./services/twoFactorService");
+        
+        // Verify code before regenerating
+        const isValid = await twoFactorService.verify2FALogin(ctx.user.id, input.code);
+        if (!isValid) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Nieprawidłowy kod 2FA" });
+        }
+        
+        const backupCodes = await twoFactorService.regenerateBackupCodes(ctx.user.id);
+        return { backupCodes };
+      }),
+    
+    // Audit logs
+    getAuditLogs: protectedProcedure
+      .input(z.object({
+        category: z.enum(["auth", "club", "member", "finance", "config", "admin", "subscription"]).optional(),
+        limit: z.number().max(500).optional(),
+        offset: z.number().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        requireMasterAdmin(ctx.user);
+        const auditService = await import("./services/auditService");
+        return auditService.getAuditLogs({
+          category: input.category,
+          limit: input.limit,
+          offset: input.offset,
+        });
+      }),
+    
+    getAuditStats: protectedProcedure.query(async ({ ctx }) => {
+      requireMasterAdmin(ctx.user);
+      const auditService = await import("./services/auditService");
+      return auditService.getAuditStats(30);
+    }),
   }),
 });
 
