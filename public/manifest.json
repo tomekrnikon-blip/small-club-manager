@@ -2,17 +2,47 @@
   "name": "Small Club Manager",
   "short_name": "SKM",
   "description": "Kompleksowe zarządzanie klubem sportowym - zawodnicy, mecze, treningi, finanse",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#22c55e",
   "orientation": "portrait",
   "icons": [
     {
+      "src": "/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png"
     },
     {
       "src": "/icon-512.png",
@@ -21,9 +51,53 @@
       "purpose": "any maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshot-home.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Ekran główny"
+    },
+    {
+      "src": "/screenshot-players.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Lista zawodników"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dodaj zawodnika",
+      "short_name": "Zawodnik",
+      "description": "Szybkie dodanie nowego zawodnika",
+      "url": "/players/add?source=shortcut",
+      "icons": [{ "src": "/icon-add-player.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Dodaj mecz",
+      "short_name": "Mecz",
+      "description": "Szybkie dodanie nowego meczu",
+      "url": "/matches/add?source=shortcut",
+      "icons": [{ "src": "/icon-add-match.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Kalendarz",
+      "short_name": "Kalendarz",
+      "description": "Zobacz kalendarz wydarzeń",
+      "url": "/calendar?source=shortcut",
+      "icons": [{ "src": "/icon-calendar.png", "sizes": "96x96" }]
+    }
+  ],
   "categories": ["sports", "productivity", "business"],
   "lang": "pl",
   "dir": "ltr",
   "scope": "/",
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  }
 }

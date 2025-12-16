@@ -46,6 +46,17 @@ export default function ClubSettingsScreen() {
   const [smsSenderName, setSmsSenderName] = useState('');
   const [isSavingSms, setIsSavingSms] = useState(false);
 
+  // Email/SMTP configuration
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [emailProvider, setEmailProvider] = useState<'none' | 'smtp' | 'sendgrid' | 'mailgun'>('none');
+  const [smtpHost, setSmtpHost] = useState('');
+  const [smtpPort, setSmtpPort] = useState('587');
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPassword, setSmtpPassword] = useState('');
+  const [emailFromName, setEmailFromName] = useState('');
+  const [emailFromAddress, setEmailFromAddress] = useState('');
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+
   const utils = trpc.useUtils();
   
   // Initialize form values when club data loads
@@ -58,6 +69,14 @@ export default function ClubSettingsScreen() {
       setSmsEnabled(club.smsEnabled || false);
       setSmsProvider((club.smsProvider as any) || 'none');
       setSmsSenderName(club.smsSenderName || '');
+      // Email config
+      setEmailEnabled(club.emailEnabled || false);
+      setEmailProvider((club.emailProvider as any) || 'none');
+      setSmtpHost(club.smtpHost || '');
+      setSmtpPort(club.smtpPort?.toString() || '587');
+      setSmtpUser(club.smtpUser || '');
+      setEmailFromName(club.emailFromName || '');
+      setEmailFromAddress(club.emailFromAddress || '');
       // Note: API keys are not returned for security - only show if they exist
     }
   }, [club]);
@@ -81,6 +100,18 @@ export default function ClubSettingsScreen() {
     },
     onError: (error: any) => {
       setIsSavingSms(false);
+      Alert.alert('Błąd', error.message);
+    },
+  });
+
+  const updateEmailConfig = trpc.clubs.updateEmailConfig.useMutation({
+    onSuccess: () => {
+      utils.clubs.list.invalidate();
+      setIsSavingEmail(false);
+      Alert.alert('Sukces', 'Konfiguracja email została zapisana');
+    },
+    onError: (error: any) => {
+      setIsSavingEmail(false);
       Alert.alert('Błąd', error.message);
     },
   });
@@ -142,6 +173,51 @@ export default function ClubSettingsScreen() {
           onPress: () => {
             // TODO: Implement SMS test
             Alert.alert('Info', 'Funkcja testowania SMS będzie dostępna wkrótce');
+          }
+        },
+      ]
+    );
+  };
+
+  const handleSaveEmailConfig = () => {
+    if (!club) return;
+    
+    if (emailEnabled && emailProvider === 'none') {
+      Alert.alert('Błąd', 'Wybierz dostawcę email');
+      return;
+    }
+    
+    if (emailEnabled && emailProvider === 'smtp') {
+      if (!smtpHost || !smtpPort || !smtpUser || !emailFromAddress) {
+        Alert.alert('Błąd', 'Wypełnij wymagane pola konfiguracji SMTP');
+        return;
+      }
+    }
+    
+    setIsSavingEmail(true);
+    updateEmailConfig.mutate({
+      clubId: club.id,
+      emailEnabled,
+      emailProvider,
+      smtpHost: emailProvider === 'smtp' ? smtpHost : undefined,
+      smtpPort: emailProvider === 'smtp' ? parseInt(smtpPort) : undefined,
+      smtpUser: emailProvider === 'smtp' ? smtpUser : undefined,
+      smtpPassword: emailProvider === 'smtp' && smtpPassword ? smtpPassword : undefined,
+      emailFromName,
+      emailFromAddress,
+    });
+  };
+
+  const testEmailConnection = () => {
+    Alert.alert(
+      'Test Email',
+      'Funkcja testowania połączenia email zostanie uruchomiona.',
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        { 
+          text: 'Wyślij test', 
+          onPress: () => {
+            Alert.alert('Info', 'Funkcja testowania email będzie dostępna wkrótce');
           }
         },
       ]
@@ -441,6 +517,171 @@ export default function ClubSettingsScreen() {
                   <Ionicons name="help-circle" size={16} color="#22c55e" />
                   <ThemedText style={styles.helpLinkText}>
                     Jak skonfigurować Twilio/SMSAPI?
+                  </ThemedText>
+                </Pressable>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Email Configuration - Only for club owner */}
+        {isOwner && (
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Konfiguracja Email</ThemedText>
+            <ThemedText style={styles.sectionDescription}>
+              Skonfiguruj wysyłanie emailów do zawodników i rodziców
+            </ThemedText>
+            
+            {/* Email Enable Toggle */}
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleInfo}>
+                <ThemedText style={styles.toggleLabel}>Włącz Email</ThemedText>
+                <ThemedText style={styles.toggleHint}>
+                  Powiadomienia będą wysyłane przez email
+                </ThemedText>
+              </View>
+              <Switch
+                value={emailEnabled}
+                onValueChange={setEmailEnabled}
+                trackColor={{ false: '#334155', true: 'rgba(34, 197, 94, 0.3)' }}
+                thumbColor={emailEnabled ? '#22c55e' : '#64748b'}
+              />
+            </View>
+
+            {emailEnabled && (
+              <>
+                {/* Provider Selection */}
+                <View style={styles.fieldGroup}>
+                  <ThemedText style={styles.fieldLabel}>Dostawca Email</ThemedText>
+                  <View style={styles.providerOptions}>
+                    <Pressable
+                      style={[styles.providerOption, emailProvider === 'smtp' && styles.providerOptionActive]}
+                      onPress={() => setEmailProvider('smtp')}
+                    >
+                      <ThemedText style={[styles.providerText, emailProvider === 'smtp' && styles.providerTextActive]}>
+                        SMTP
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.providerOption, emailProvider === 'sendgrid' && styles.providerOptionActive]}
+                      onPress={() => setEmailProvider('sendgrid')}
+                    >
+                      <ThemedText style={[styles.providerText, emailProvider === 'sendgrid' && styles.providerTextActive]}>
+                        SendGrid
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* SMTP Configuration */}
+                {emailProvider === 'smtp' && (
+                  <>
+                    <View style={styles.fieldGroup}>
+                      <ThemedText style={styles.fieldLabel}>Serwer SMTP *</ThemedText>
+                      <TextInput
+                        style={styles.input}
+                        value={smtpHost}
+                        onChangeText={setSmtpHost}
+                        placeholder="smtp.gmail.com"
+                        placeholderTextColor="#64748b"
+                        autoCapitalize="none"
+                      />
+                    </View>
+                    <View style={styles.fieldGroup}>
+                      <ThemedText style={styles.fieldLabel}>Port SMTP *</ThemedText>
+                      <TextInput
+                        style={styles.input}
+                        value={smtpPort}
+                        onChangeText={setSmtpPort}
+                        placeholder="587"
+                        placeholderTextColor="#64748b"
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <View style={styles.fieldGroup}>
+                      <ThemedText style={styles.fieldLabel}>Użytkownik SMTP *</ThemedText>
+                      <TextInput
+                        style={styles.input}
+                        value={smtpUser}
+                        onChangeText={setSmtpUser}
+                        placeholder="twoj@email.com"
+                        placeholderTextColor="#64748b"
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                      />
+                    </View>
+                    <View style={styles.fieldGroup}>
+                      <ThemedText style={styles.fieldLabel}>Hasło SMTP</ThemedText>
+                      <TextInput
+                        style={styles.input}
+                        value={smtpPassword}
+                        onChangeText={setSmtpPassword}
+                        placeholder="Hasło lub App Password"
+                        placeholderTextColor="#64748b"
+                        secureTextEntry
+                        autoCapitalize="none"
+                      />
+                    </View>
+                  </>
+                )}
+
+                {/* Common Email Settings */}
+                <View style={styles.fieldGroup}>
+                  <ThemedText style={styles.fieldLabel}>Nazwa nadawcy</ThemedText>
+                  <TextInput
+                    style={styles.input}
+                    value={emailFromName}
+                    onChangeText={setEmailFromName}
+                    placeholder="Mój Klub Sportowy"
+                    placeholderTextColor="#64748b"
+                  />
+                </View>
+                <View style={styles.fieldGroup}>
+                  <ThemedText style={styles.fieldLabel}>Adres email nadawcy *</ThemedText>
+                  <TextInput
+                    style={styles.input}
+                    value={emailFromAddress}
+                    onChangeText={setEmailFromAddress}
+                    placeholder="kontakt@mojklub.pl"
+                    placeholderTextColor="#64748b"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+
+                {/* Action Buttons */}
+                <View style={styles.smsActions}>
+                  <Pressable
+                    style={[styles.smsButton, styles.testButton]}
+                    onPress={testEmailConnection}
+                  >
+                    <Ionicons name="flask" size={18} color="#3b82f6" />
+                    <ThemedText style={styles.testButtonText}>Testuj połączenie</ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.smsButton, styles.saveButton, isSavingEmail && styles.buttonDisabled]}
+                    onPress={handleSaveEmailConfig}
+                    disabled={isSavingEmail}
+                  >
+                    {isSavingEmail ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="save" size={18} color="#fff" />
+                        <ThemedText style={styles.saveButtonText}>Zapisz konfigurację</ThemedText>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
+
+                {/* Help Link */}
+                <Pressable 
+                  style={styles.helpLink}
+                  onPress={() => router.push('/help' as any)}
+                >
+                  <Ionicons name="help-circle" size={16} color="#22c55e" />
+                  <ThemedText style={styles.helpLinkText}>
+                    Jak skonfigurować SMTP?
                   </ThemedText>
                 </Pressable>
               </>

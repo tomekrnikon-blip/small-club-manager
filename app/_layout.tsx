@@ -19,6 +19,7 @@ import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/manus-runtime";
 import { loadSavedLanguage } from "@/lib/i18n";
 import "@/lib/i18n"; // Initialize i18n
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -85,6 +86,7 @@ export default function RootLayout() {
               <Stack.Screen name="oauth/callback" options={{ headerShown: false }} />
             </Stack>
             <StatusBar style="auto" />
+            <PwaInstallBanner />
           </ThemeProvider>
         </QueryClientProvider>
       </trpc.Provider>

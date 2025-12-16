@@ -74,11 +74,11 @@
 - [x] Anulowanie subskrypcji przez użytkownika
 
 ## Pending Features (Future)
-- [ ] Panel konfiguracji SMTP w UI (backend gotowy)
-- [ ] PWA support
+- [x] Panel konfiguracji SMTP w UI (backend gotowy)
+- [x] PWA install prompt (use-pwa-install.ts, pwa-install-banner.tsx)
 - [ ] Advertising/affiliate space
 - [ ] Real-time notifications with WebSockets
-- [ ] Advanced analytics dashboard
+- [x] Advanced analytics dashboard
 
 
 ## Webhook i Cron Job (Completed)
