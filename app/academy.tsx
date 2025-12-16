@@ -9,12 +9,14 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { Alert } from "react-native";
 
 export default function AcademyScreen() {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSendingReminders, setIsSendingReminders] = useState(false);
 
   const { data: clubs } = trpc.clubs.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -109,9 +111,51 @@ export default function AcademyScreen() {
 
       {/* Quick Actions */}
       <View style={styles.quickActions}>
-        <Pressable style={styles.actionButton}>
-          <MaterialIcons name="notifications" size={20} color={AppColors.warning} />
-          <ThemedText style={styles.actionText}>Wyślij przypomnienie</ThemedText>
+        <Pressable 
+          style={[styles.actionButton, isSendingReminders && styles.actionButtonDisabled]}
+          disabled={isSendingReminders}
+          onPress={async () => {
+            Alert.alert(
+              "Wyślij przypomnienia",
+              `Czy chcesz wysłać przypomnienia o płatności do ${unpaidCount} rodziców uczniów z nieopłaconymi składkami?`,
+              [
+                { text: "Anuluj", style: "cancel" },
+                {
+                  text: "Wyślij",
+                  onPress: async () => {
+                    setIsSendingReminders(true);
+                    try {
+                      const response = await fetch("/api/admin/process-notifications", {
+                        method: "POST",
+                      });
+                      const result = await response.json();
+                      if (result.success) {
+                        Alert.alert(
+                          "Sukces",
+                          `Wysłano ${result.reminders?.sent || 0} przypomnień o płatności.`
+                        );
+                      } else {
+                        Alert.alert("Błąd", "Nie udało się wysłać przypomnień.");
+                      }
+                    } catch (error) {
+                      Alert.alert("Błąd", "Wystąpił błąd podczas wysyłania przypomnień.");
+                    } finally {
+                      setIsSendingReminders(false);
+                    }
+                  },
+                },
+              ]
+            );
+          }}
+        >
+          {isSendingReminders ? (
+            <ActivityIndicator size="small" color={AppColors.warning} />
+          ) : (
+            <MaterialIcons name="notifications" size={20} color={AppColors.warning} />
+          )}
+          <ThemedText style={styles.actionText}>
+            {isSendingReminders ? "Wysyłanie..." : "Wyślij przypomnienie"}
+          </ThemedText>
         </Pressable>
         <Pressable style={styles.actionButton}>
           <MaterialIcons name="event" size={20} color={AppColors.primary} />
@@ -288,6 +332,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     padding: Spacing.md,
     gap: Spacing.sm,
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
   },
   actionText: {
     fontSize: 13,

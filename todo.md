@@ -74,12 +74,18 @@
 - [x] Anulowanie subskrypcji przez użytkownika
 
 ## Pending Features (Future)
-- [ ] Real Stripe SDK integration with webhooks
-- [ ] Cron job for processing scheduled_notifications
-- [ ] Real email sending integration
-- [ ] Payment reminders for academy parents
+- [ ] Real email sending integration (SMTP)
 - [ ] Multi-language support (PL, EN, DE)
 - [ ] Full PDF export functionality
 - [ ] Image upload for gallery (S3 integration)
 - [ ] Google Calendar integration
 - [ ] Excel data export
+
+
+## Webhook i Cron Job (Completed)
+- [x] Stripe webhook endpoint dla potwierdzenia płatności
+- [x] Automatyczna aktywacja PRO po płatności
+- [x] Cron job dla przetwarzania scheduled_notifications
+- [x] Wysyłanie SMS przez Twilio/SMSAPI
+- [x] Przypomnienia o płatnościach dla rodziców w Szkółce
+- [x] Przycisk wysyłania przypomnień w module Szkółka

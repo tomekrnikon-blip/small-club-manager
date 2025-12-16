@@ -6,6 +6,9 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { processStripeWebhook, verifyStripeSignature } from "../webhooks/stripe";
+import * as db from "../db";
+import { startCronService, triggerNotificationProcessing } from "../services/cronService";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -60,6 +63,49 @@ async function startServer() {
     res.json({ ok: true, timestamp: Date.now() });
   });
 
+  // Stripe webhook endpoint
+  app.post("/api/stripe/webhook", express.raw({ type: 'application/json' }), async (req, res) => {
+    const signature = req.headers['stripe-signature'] as string;
+    
+    try {
+      // Get webhook secret from app settings
+      const webhookSecretSetting = await db.getAppSetting('stripe_webhook_secret');
+      const webhookSecret = webhookSecretSetting?.value || '';
+      
+      if (!webhookSecret) {
+        console.warn('[Stripe Webhook] No webhook secret configured');
+        res.status(400).json({ error: 'Webhook not configured' });
+        return;
+      }
+      
+      // Verify signature
+      const isValid = await verifyStripeSignature(
+        req.body.toString(),
+        signature,
+        webhookSecret
+      );
+      
+      if (!isValid) {
+        console.warn('[Stripe Webhook] Invalid signature');
+        res.status(400).json({ error: 'Invalid signature' });
+        return;
+      }
+      
+      // Parse and process the event
+      const event = JSON.parse(req.body.toString());
+      const result = await processStripeWebhook(event);
+      
+      if (result.success) {
+        res.json({ received: true, message: result.message });
+      } else {
+        res.status(400).json({ error: result.message });
+      }
+    } catch (error) {
+      console.error('[Stripe Webhook] Error:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
+    }
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -77,6 +123,20 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`[api] server listening on port ${port}`);
+    
+    // Start cron service for scheduled notifications
+    startCronService();
+  });
+
+  // Manual trigger endpoint for processing notifications (admin only)
+  app.post("/api/admin/process-notifications", async (req, res) => {
+    try {
+      const result = await triggerNotificationProcessing();
+      res.json({ success: true, ...result });
+    } catch (error) {
+      console.error('[Admin] Error processing notifications:', error);
+      res.status(500).json({ error: 'Failed to process notifications' });
+    }
   });
 }
 

@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, or, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users,
@@ -1086,4 +1086,37 @@ export async function revokeProSubscription(userId: number) {
       subscriptionStatus: null
     })
     .where(eq(users.id, userId));
+}
+
+
+// ============================================
+// ACADEMY PAYMENT REMINDER FUNCTIONS
+// ============================================
+export async function getUnpaidAcademyStudents() {
+  const db = await getDb();
+  if (!db) return [];
+  // Get students who haven't paid this month - check academyPayments
+  return db.select().from(academyStudents);
+}
+
+export async function getAcademyStudentsNeedingReminder(daysSinceLastReminder: number = 7) {
+  const db = await getDb();
+  if (!db) return [];
+  const cutoffDate = new Date(Date.now() - daysSinceLastReminder * 24 * 60 * 60 * 1000);
+  return db.select()
+    .from(academyStudents)
+    .where(
+      or(
+        isNull(academyStudents.lastReminderSent),
+        lte(academyStudents.lastReminderSent, cutoffDate)
+      )
+    );
+}
+
+export async function updateAcademyStudentReminderDate(studentId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(academyStudents)
+    .set({ lastReminderSent: new Date() })
+    .where(eq(academyStudents.id, studentId));
 }
