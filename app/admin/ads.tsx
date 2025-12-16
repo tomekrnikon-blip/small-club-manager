@@ -221,6 +221,58 @@ export default function AdManagementScreen() {
           </View>
         </View>
 
+        {/* Performance Chart */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Wydajność w czasie</ThemedText>
+          <View style={styles.chartContainer}>
+            {/* Simple bar chart visualization */}
+            <View style={styles.chartHeader}>
+              <ThemedText style={styles.chartLabel}>Ostatnie 7 dni</ThemedText>
+            </View>
+            <View style={styles.chartBars}>
+              {[65, 80, 45, 90, 75, 60, 85].map((value, index) => (
+                <View key={index} style={styles.barContainer}>
+                  <View style={[styles.bar, { height: value }]}>
+                    <View style={[styles.barFill, { height: `${value}%` }]} />
+                  </View>
+                  <ThemedText style={styles.barLabel}>
+                    {['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'][index]}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+            <View style={styles.chartLegend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: AppColors.primary }]} />
+                <ThemedText style={styles.legendText}>Wyświetlenia</ThemedText>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: AppColors.secondary }]} />
+                <ThemedText style={styles.legendText}>Kliknięcia</ThemedText>
+              </View>
+            </View>
+          </View>
+
+          {/* CTR Trend */}
+          <View style={styles.trendCard}>
+            <View style={styles.trendHeader}>
+              <MaterialIcons name="trending-up" size={24} color={AppColors.success} />
+              <ThemedText style={styles.trendTitle}>Trend CTR</ThemedText>
+            </View>
+            <View style={styles.trendContent}>
+              <ThemedText style={styles.trendValue}>+12.5%</ThemedText>
+              <ThemedText style={styles.trendSubtext}>vs poprzedni tydzień</ThemedText>
+            </View>
+            <View style={styles.trendBars}>
+              {[2.1, 2.8, 3.2, 2.9, 3.5, 3.8, 4.2].map((ctr, index) => (
+                <View key={index} style={styles.trendBarContainer}>
+                  <View style={[styles.trendBar, { height: ctr * 15 }]} />
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
         {/* Ads List */}
         <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>Aktywne reklamy</ThemedText>
@@ -684,5 +736,114 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontWeight: "600",
     color: "#fff",
+  },
+  // Chart styles
+  chartContainer: {
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  chartHeader: {
+    marginBottom: Spacing.md,
+  },
+  chartLabel: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#94a3b8",
+  },
+  chartBars: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    height: 100,
+    marginBottom: Spacing.md,
+  },
+  barContainer: {
+    alignItems: "center",
+    flex: 1,
+  },
+  bar: {
+    width: 24,
+    backgroundColor: AppColors.primary + "30",
+    borderRadius: Radius.sm,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+  },
+  barFill: {
+    backgroundColor: AppColors.primary,
+    width: "100%",
+  },
+  barLabel: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: "#64748b",
+    marginTop: 4,
+  },
+  chartLegend: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: Spacing.lg,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#94a3b8",
+  },
+  trendCard: {
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+  },
+  trendHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  trendTitle: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  trendContent: {
+    marginBottom: Spacing.md,
+  },
+  trendValue: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "bold",
+    color: AppColors.success,
+  },
+  trendSubtext: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#64748b",
+  },
+  trendBars: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    height: 60,
+  },
+  trendBarContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
+  trendBar: {
+    width: 16,
+    backgroundColor: AppColors.success,
+    borderRadius: Radius.sm,
   },
 });

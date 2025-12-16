@@ -14,6 +14,10 @@ import {
   saveNotificationPreferences,
   type NotificationPreferences,
 } from "@/lib/background-notifications";
+import {
+  isSponsorNotificationsEnabled,
+  setSponsorNotificationsEnabled,
+} from "@/lib/sponsor-notifications";
 
 export default function NotificationPreferencesScreen() {
   const { isAuthenticated } = useAuth();
@@ -33,6 +37,7 @@ export default function NotificationPreferencesScreen() {
   const [trainingReminderHours, setTrainingReminderHours] = useState(2);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sponsorNotifications, setSponsorNotifications] = useState(false);
 
   useEffect(() => {
     loadPreferences();
@@ -42,6 +47,8 @@ export default function NotificationPreferencesScreen() {
     try {
       const prefs = await getNotificationPreferences();
       setPreferences(prefs);
+      const sponsorEnabled = await isSponsorNotificationsEnabled();
+      setSponsorNotifications(sponsorEnabled);
     } catch (error) {
       console.error("Error loading preferences:", error);
     } finally {
@@ -184,6 +191,25 @@ export default function NotificationPreferencesScreen() {
               disabled={!preferences.enabled}
               trackColor={{ false: "#475569", true: AppColors.primary + "80" }}
               thumbColor={preferences.paymentReminders ? AppColors.primary : "#94a3b8"}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <ThemedText style={styles.settingLabel}>Promocje sponsorów</ThemedText>
+              <ThemedText style={styles.settingDescription}>
+                Powiadomienia o ofertach i promocjach partnerów
+              </ThemedText>
+            </View>
+            <Switch
+              value={sponsorNotifications}
+              onValueChange={async (value) => {
+                setSponsorNotifications(value);
+                await setSponsorNotificationsEnabled(value);
+              }}
+              disabled={!preferences.enabled}
+              trackColor={{ false: "#475569", true: AppColors.warning + "80" }}
+              thumbColor={sponsorNotifications ? AppColors.warning : "#94a3b8"}
             />
           </View>
         </View>

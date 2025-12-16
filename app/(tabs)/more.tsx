@@ -142,8 +142,13 @@ export default function MoreScreen() {
           />
           <MenuItem
             icon="event"
-            label="Eksport kalendarza"
+            label="Eksport kalendarza (ICS)"
             onPress={() => router.push("/calendar-export" as any)}
+          />
+          <MenuItem
+            icon="sync"
+            label="Synchronizacja kalendarza"
+            onPress={() => router.push("/calendar-sync" as any)}
           />
           {club && permissions.canEditClub && (
             <MenuItem

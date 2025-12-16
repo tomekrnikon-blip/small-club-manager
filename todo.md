@@ -190,3 +190,9 @@
 - [x] Notification settings screen for users (notification-preferences.tsx)
 - [x] Ad management panel in admin (admin/ads.tsx)
 - [x] System calendar integration (system-calendar.ts, match/[id].tsx, trainings.tsx)
+
+
+## Calendar & Ads Improvements (In Progress)
+- [x] Bulk calendar export for all upcoming events (calendar-sync.tsx)
+- [x] Ad statistics charts over time (admin/ads.tsx)
+- [x] Sponsor push notifications (sponsor-notifications.ts, notification-preferences.tsx)
