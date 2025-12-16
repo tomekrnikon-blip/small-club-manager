@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 import { HapticTab } from "@/components/haptic-tab";
+import { SyncBadgeIcon } from "@/components/sync-badge-icon";
 import { AppColors } from "@/constants/theme";
 
 export default function TabLayout() {
@@ -71,7 +72,7 @@ export default function TabLayout() {
         options={{
           title: "Więcej",
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="menu" size={size} color={color} />
+            <SyncBadgeIcon name="menu" size={size} color={color} />
           ),
         }}
       />

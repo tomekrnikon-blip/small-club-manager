@@ -20,6 +20,7 @@ import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/manus-runtime";
 import { loadSavedLanguage } from "@/lib/i18n";
 import "@/lib/i18n"; // Initialize i18n
 import { PwaInstallBanner } from "@/components/pwa-install-banner";
+import { RealtimeToast } from "@/components/realtime-toast";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -87,6 +88,7 @@ export default function RootLayout() {
             </Stack>
             <StatusBar style="auto" />
             <PwaInstallBanner />
+            <RealtimeToast />
           </ThemeProvider>
         </QueryClientProvider>
       </trpc.Provider>

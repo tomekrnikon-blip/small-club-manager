@@ -163,3 +163,9 @@
 - [x] Restore - import danych z pliku JSON (club/backup.tsx)
 - [x] Backend API dla backup/restore (backup router)
 - [x] Backend API dla analytics (analytics router)
+
+
+## UI Improvements (Completed)
+- [x] WebSocket notifications UI integration (realtime-toast.tsx)
+- [x] Sync indicator badge on More tab (sync-badge-icon.tsx)
+- [x] tRPC caching wrapper for offline support (trpc-offline.ts)
