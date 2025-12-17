@@ -203,6 +203,21 @@ export default function MoreScreen() {
             onPress={() => router.push("/sms-settings" as any)}
           />
           <MenuItem
+            icon="bar-chart"
+            label="Statystyki SMS"
+            onPress={() => router.push("/sms-stats" as any)}
+          />
+          <MenuItem
+            icon="tune"
+            label="Kanały powiadomień"
+            onPress={() => router.push("/messaging-settings" as any)}
+          />
+          <MenuItem
+            icon="account-balance-wallet"
+            label="Limity kosztów"
+            onPress={() => router.push("/messaging-limits" as any)}
+          />
+          <MenuItem
             icon="schedule"
             label="Automatyczne przypomnienia"
             onPress={() => router.push("/auto-reminders" as any)}

@@ -250,3 +250,9 @@
 - [x] WhatsApp test connection button (whatsapp-settings.tsx - handleTestMessage)
 - [x] WhatsApp message statistics and history (whatsapp-stats.tsx)
 - [x] SMS integration with user's own provider (sms-user-service.ts, sms-settings.tsx)
+
+
+## Unified Messaging (In Progress)
+- [x] SMS statistics screen with history and charts (sms-stats.tsx)
+- [x] Unified messaging settings screen (messaging-settings.tsx)
+- [x] Monthly cost limits with alerts for SMS/WhatsApp (messaging-limits.tsx)
