@@ -27,7 +27,7 @@ import { AppColors, Spacing, Radius } from "@/constants/theme";
 
 // Template types
 type TemplateType = "result" | "preview" | "stats" | "highlight";
-type TemplateStyle = "dark" | "gradient" | "minimal" | "bold";
+// Template style type moved below with extended options
 
 interface MatchData {
   id: number;
@@ -59,11 +59,63 @@ interface SocialShareCardProps {
   type: TemplateType;
 }
 
-const TEMPLATE_STYLES: { id: TemplateStyle; name: string; colors: { bg: string; accent: string; text: string } }[] = [
-  { id: "dark", name: "Ciemny", colors: { bg: "#0f172a", accent: "#22c55e", text: "#ffffff" } },
-  { id: "gradient", name: "Gradient", colors: { bg: "#1e3a5f", accent: "#3b82f6", text: "#ffffff" } },
-  { id: "minimal", name: "Minimalny", colors: { bg: "#ffffff", accent: "#22c55e", text: "#0f172a" } },
-  { id: "bold", name: "Wyrazisty", colors: { bg: "#22c55e", accent: "#ffffff", text: "#0f172a" } },
+// Extended template styles with more designs
+type TemplateStyle = "dark" | "gradient" | "minimal" | "bold" | "neon" | "retro" | "sport" | "elegant";
+
+const TEMPLATE_STYLES: { 
+  id: TemplateStyle; 
+  name: string; 
+  colors: { bg: string; accent: string; text: string; secondary?: string };
+  pattern?: "stripes" | "dots" | "diagonal" | "none";
+}[] = [
+  { 
+    id: "dark", 
+    name: "Ciemny", 
+    colors: { bg: "#0f172a", accent: "#22c55e", text: "#ffffff", secondary: "#334155" },
+    pattern: "none"
+  },
+  { 
+    id: "gradient", 
+    name: "Gradient", 
+    colors: { bg: "#1e3a5f", accent: "#3b82f6", text: "#ffffff", secondary: "#60a5fa" },
+    pattern: "none"
+  },
+  { 
+    id: "minimal", 
+    name: "Minimalny", 
+    colors: { bg: "#ffffff", accent: "#22c55e", text: "#0f172a", secondary: "#64748b" },
+    pattern: "none"
+  },
+  { 
+    id: "bold", 
+    name: "Wyrazisty", 
+    colors: { bg: "#22c55e", accent: "#ffffff", text: "#0f172a", secondary: "#166534" },
+    pattern: "none"
+  },
+  { 
+    id: "neon", 
+    name: "Neon", 
+    colors: { bg: "#0a0a0a", accent: "#00ff88", text: "#ffffff", secondary: "#ff00ff" },
+    pattern: "none"
+  },
+  { 
+    id: "retro", 
+    name: "Retro", 
+    colors: { bg: "#fef3c7", accent: "#d97706", text: "#451a03", secondary: "#92400e" },
+    pattern: "stripes"
+  },
+  { 
+    id: "sport", 
+    name: "Sportowy", 
+    colors: { bg: "#1e1e1e", accent: "#ef4444", text: "#ffffff", secondary: "#fbbf24" },
+    pattern: "diagonal"
+  },
+  { 
+    id: "elegant", 
+    name: "Elegancki", 
+    colors: { bg: "#1a1a2e", accent: "#c9a227", text: "#ffffff", secondary: "#e0e0e0" },
+    pattern: "none"
+  },
 ];
 
 export function SocialShareCard({ visible, onClose, matchData, type }: SocialShareCardProps) {
@@ -204,14 +256,81 @@ export function SocialShareCard({ visible, onClose, matchData, type }: SocialSha
     }
   };
 
+  // Render pattern overlay for templates with patterns
+  const renderPatternOverlay = () => {
+    const currentStyle = TEMPLATE_STYLES.find(s => s.id === selectedStyle);
+    if (!currentStyle?.pattern || currentStyle.pattern === "none") return null;
+
+    const patternColor = currentStyle.colors.secondary || currentStyle.colors.accent;
+    
+    if (currentStyle.pattern === "stripes") {
+      return (
+        <View style={styles.patternOverlay} pointerEvents="none">
+          {[...Array(8)].map((_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.stripe,
+                {
+                  backgroundColor: patternColor + "15",
+                  top: i * 50,
+                  transform: [{ rotate: "-45deg" }],
+                },
+              ]}
+            />
+          ))}
+        </View>
+      );
+    }
+
+    if (currentStyle.pattern === "diagonal") {
+      return (
+        <View style={styles.patternOverlay} pointerEvents="none">
+          <View
+            style={[
+              styles.diagonalStripe,
+              { backgroundColor: patternColor + "20" },
+            ]}
+          />
+          <View
+            style={[
+              styles.diagonalStripe2,
+              { backgroundColor: currentStyle.colors.accent + "15" },
+            ]}
+          />
+        </View>
+      );
+    }
+
+    return null;
+  };
+
   const renderTemplate = () => {
     const bgColor = style.colors.bg;
     const accentColor = style.colors.accent;
     const textColor = style.colors.text;
+    const secondaryColor = style.colors.secondary || "#94a3b8";
     const secondaryText = selectedStyle === "minimal" || selectedStyle === "bold" ? "#64748b" : "#94a3b8";
+
+    // Special styling for neon template
+    const isNeon = selectedStyle === "neon";
+    const isElegant = selectedStyle === "elegant";
+    const isSport = selectedStyle === "sport";
 
     return (
       <View style={[styles.templateContainer, { backgroundColor: bgColor }]}>
+        {/* Pattern overlay */}
+        {renderPatternOverlay()}
+        
+        {/* Neon glow effect */}
+        {isNeon && (
+          <View style={[styles.neonGlow, { shadowColor: accentColor }]} />
+        )}
+        
+        {/* Elegant gold border */}
+        {isElegant && (
+          <View style={[styles.elegantBorder, { borderColor: accentColor }]} />
+        )}
         {/* Header with SKM Logo */}
         <View style={styles.templateHeader}>
           <View style={styles.logoContainer}>
@@ -841,5 +960,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#fff",
+  },
+  // Pattern overlay styles
+  patternOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+  },
+  stripe: {
+    position: "absolute",
+    width: 500,
+    height: 20,
+    left: -100,
+  },
+  diagonalStripe: {
+    position: "absolute",
+    width: 200,
+    height: 400,
+    right: -50,
+    top: -50,
+    transform: [{ rotate: "30deg" }],
+  },
+  diagonalStripe2: {
+    position: "absolute",
+    width: 150,
+    height: 300,
+    left: -30,
+    bottom: -30,
+    transform: [{ rotate: "30deg" }],
+  },
+  neonGlow: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    right: 10,
+    bottom: 10,
+    borderRadius: Radius.lg - 4,
+    borderWidth: 2,
+    borderColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  elegantBorder: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    right: 8,
+    bottom: 8,
+    borderRadius: Radius.lg - 4,
+    borderWidth: 2,
   },
 });

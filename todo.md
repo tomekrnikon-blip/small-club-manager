@@ -859,3 +859,15 @@
 - [x] Custom post templates with club branding
 - [x] Social share card component with 4 style options
 - [x] Share button on match detail screen
+
+
+## Facebook OAuth & Template Gallery (Completed)
+- [x] Facebook Graph API OAuth authentication flow
+- [x] Facebook Page selection after OAuth
+- [x] Instagram Business account linking
+- [x] Expanded template gallery with more designs (8 styles)
+- [x] Pattern overlays (stripes, diagonal)
+- [x] Neon glow effect template
+- [x] Elegant gold border template
+- [x] Sport dynamic template
+- [x] Retro vintage template
