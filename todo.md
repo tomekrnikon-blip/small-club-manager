@@ -776,3 +776,14 @@
 - [x] Club ownership transfer to another manager (transferClubOwnership)
 - [x] Transfer confirmation flow (transfer-club.tsx)
 - [x] Get transfer candidates endpoint
+
+
+## Trial Period & Subscription (Completed)
+- [x] Add trial period fields to club schema (trialStartDate, trialEndDate, isTrialActive)
+- [x] Create trial status service (trialService.ts)
+- [x] Subscription check logic for edit permissions
+- [x] Read-only mode UI for expired trials (TrialBanner, ReadOnlyBanner)
+- [x] Subscription paywall screen (updated subscription.tsx)
+- [x] Trial router with status endpoints
+- [x] useTrialStatus hook for app-wide access
+- [x] Block editing after trial without subscription

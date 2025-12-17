@@ -2729,6 +2729,44 @@ export const appRouter = router({
         return candidates;
       }),
   }),
+
+  // Trial and subscription router
+  trial: router({
+    // Get trial status for a club
+    getStatus: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { getTrialStatus } = await import("./services/trialService");
+        return getTrialStatus(input.clubId, ctx.user.id);
+      }),
+
+    // Check if edit action is allowed
+    canEdit: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { canPerformEditAction } = await import("./services/trialService");
+        return canPerformEditAction(input.clubId, ctx.user.id);
+      }),
+
+    // Get subscription plans
+    getPlans: publicProcedure.query(async () => {
+      const plans = await db.getSubscriptionPlans();
+      return plans.filter(p => p.isActive);
+    }),
+
+    // Initialize trial for new club (called when creating club)
+    initializeTrial: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const club = await db.getClubById(input.clubId);
+        if (!club || club.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień" });
+        }
+        const { initializeTrialPeriod } = await import("./services/trialService");
+        await initializeTrialPeriod(input.clubId);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

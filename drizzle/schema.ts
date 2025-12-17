@@ -67,6 +67,12 @@ export const clubs = mysqlTable("clubs", {
   emailFromAddress: varchar("emailFromAddress", { length: 320 }),
   emailEnabled: boolean("emailEnabled").default(false).notNull(),
   isBlocked: boolean("isBlocked").default(false).notNull(),
+  // Trial period fields
+  trialStartDate: timestamp("trialStartDate").defaultNow(),
+  trialEndDate: timestamp("trialEndDate"),
+  isTrialActive: boolean("isTrialActive").default(true).notNull(),
+  trialExpiredNotified: boolean("trialExpiredNotified").default(false).notNull(),
+  subscriptionRequired: boolean("subscriptionRequired").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

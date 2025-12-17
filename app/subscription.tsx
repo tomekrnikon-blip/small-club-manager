@@ -10,6 +10,9 @@ import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
+import { useTrialStatus } from "@/hooks/use-trial-status";
+import { TrialBanner } from "@/components/trial-banner";
+
 const features = {
   free: [
     "1 klub",
@@ -93,6 +96,11 @@ export default function SubscriptionScreen() {
   };
 
   const isPro = user?.isPro;
+  
+  // Get trial status for first club (if any)
+  const { data: clubs } = trpc.clubs.list.useQuery(undefined, { enabled: isAuthenticated });
+  const firstClubId = clubs?.[0]?.id;
+  const trialStatus = useTrialStatus(firstClubId);
   const hasActiveStripeSubscription = currentSubscription?.status === 'active' && currentSubscription?.stripeSubscriptionId;
 
   if (!isAuthenticated) {
