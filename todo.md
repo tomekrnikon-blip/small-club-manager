@@ -231,3 +231,9 @@
 - [x] Attendance notifications for unmarked players after training (attendance-notifications.ts, training/[id].tsx)
 - [x] Frequency report PDF export for team (frequency-report.tsx)
 - [x] Absence excuse system with reasons (absence-excuse.tsx, training/[id].tsx)
+
+
+## Reminder & Analytics Improvements (In Progress)
+- [x] Automatic reminder scheduling before trainings (auto-reminders.ts, auto-reminders.tsx)
+- [x] Team frequency comparison chart (team-frequency.tsx)
+- [x] Excel/CSV export for frequency data (frequency-report.tsx)

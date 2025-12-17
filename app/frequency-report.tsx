@@ -284,6 +284,88 @@ export default function FrequencyReportScreen() {
     }
   };
 
+  // Generate CSV report
+  const generateCSV = async () => {
+    if (!club || playerStats.length === 0) {
+      Alert.alert("Błąd", "Brak danych do wygenerowania raportu");
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const periodLabels: Record<ReportPeriod, string> = {
+        week: 'Ostatni tydzien',
+        month: 'Ostatni miesiac',
+        quarter: 'Ostatni kwartal',
+        year: 'Ostatni rok',
+      };
+
+      const teamName = selectedTeamId 
+        ? teams?.find(t => t.id === selectedTeamId)?.name || 'Zespol'
+        : 'Wszystkie zespoly';
+
+      // CSV header
+      const csvRows = [
+        ['Lp', 'Zawodnik', 'Pozycja', 'Treningi obecny', 'Treningi total', 'Treningi %', 'Mecze obecny', 'Mecze total', 'Mecze %', 'Ogolem %'].join(';'),
+      ];
+
+      // CSV data rows
+      playerStats.forEach((player, index) => {
+        csvRows.push([
+          index + 1,
+          player.name,
+          player.position || '-',
+          player.trainingPresent,
+          player.trainingTotal,
+          player.trainingPercentage,
+          player.matchPresent,
+          player.matchTotal,
+          player.matchPercentage,
+          player.overallPercentage,
+        ].join(';'));
+      });
+
+      // Add summary row
+      csvRows.push('');
+      csvRows.push(['Raport wygenerowany:', new Date().toLocaleString('pl-PL')].join(';'));
+      csvRows.push(['Klub:', club.name].join(';'));
+      csvRows.push(['Zespol:', teamName].join(';'));
+      csvRows.push(['Okres:', periodLabels[selectedPeriod]].join(';'));
+
+      const csv = csvRows.join('\n');
+      const fileName = `frekwencja_${club.name.replace(/\s+/g, '_')}_${selectedPeriod}.csv`;
+
+      // Create blob and share/download
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      if (Platform.OS === 'web') {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        Alert.alert("Sukces", "Raport CSV został pobrany");
+      } else {
+        try {
+          await Share.share({
+            title: 'Raport frekwencji CSV',
+            message: csv,
+          });
+        } catch (e) {
+          Alert.alert("Info", "Raport CSV został wygenerowany.");
+          console.log(csv);
+        }
+      }
+    } catch (error) {
+      console.error('[FrequencyReport] Error generating CSV:', error);
+      Alert.alert("Błąd", "Nie udało się wygenerować raportu CSV");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const periods: { value: ReportPeriod; label: string }[] = [
     { value: 'week', label: 'Tydzień' },
     { value: 'month', label: 'Miesiąc' },
@@ -408,23 +490,37 @@ export default function FrequencyReportScreen() {
           )}
         </View>
 
-        {/* Generate Button */}
-        <Pressable
-          style={[styles.generateBtn, isGenerating && styles.generateBtnDisabled]}
-          onPress={generateReport}
-          disabled={isGenerating || playerStats.length === 0}
-        >
-          {isGenerating ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <MaterialIcons name="picture-as-pdf" size={20} color="#fff" />
-              <ThemedText style={styles.generateBtnText}>
-                Generuj raport HTML
-              </ThemedText>
-            </>
-          )}
-        </Pressable>
+        {/* Generate Buttons */}
+        <View style={styles.buttonsRow}>
+          <Pressable
+            style={[styles.generateBtn, styles.htmlBtn, isGenerating && styles.generateBtnDisabled]}
+            onPress={generateReport}
+            disabled={isGenerating || playerStats.length === 0}
+          >
+            {isGenerating ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <MaterialIcons name="code" size={20} color="#fff" />
+                <ThemedText style={styles.generateBtnText}>HTML</ThemedText>
+              </>
+            )}
+          </Pressable>
+          <Pressable
+            style={[styles.generateBtn, styles.csvBtn, isGenerating && styles.generateBtnDisabled]}
+            onPress={generateCSV}
+            disabled={isGenerating || playerStats.length === 0}
+          >
+            {isGenerating ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <MaterialIcons name="table-chart" size={20} color="#fff" />
+                <ThemedText style={styles.generateBtnText}>CSV/Excel</ThemedText>
+              </>
+            )}
+          </Pressable>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -557,7 +653,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: Spacing.md,
   },
+  buttonsRow: {
+    flexDirection: "row",
+    gap: Spacing.md,
+    marginTop: Spacing.lg,
+  },
   generateBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -565,7 +667,12 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.primary,
     paddingVertical: Spacing.lg,
     borderRadius: Radius.md,
-    marginTop: Spacing.lg,
+  },
+  htmlBtn: {
+    backgroundColor: AppColors.primary,
+  },
+  csvBtn: {
+    backgroundColor: "#22c55e",
   },
   generateBtnDisabled: {
     opacity: 0.6,

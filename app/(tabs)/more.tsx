@@ -188,6 +188,16 @@ export default function MoreScreen() {
             onPress={() => router.push("/notification-preferences" as any)}
           />
           <MenuItem
+            icon="schedule"
+            label="Automatyczne przypomnienia"
+            onPress={() => router.push("/auto-reminders" as any)}
+          />
+          <MenuItem
+            icon="bar-chart"
+            label="Porównanie frekwencji"
+            onPress={() => router.push("/team-frequency" as any)}
+          />
+          <MenuItem
             icon="history"
             label="Historia powiadomień"
             onPress={() => router.push("/notification-history" as any)}
