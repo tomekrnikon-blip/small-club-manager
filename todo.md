@@ -923,3 +923,13 @@
 - [x] Central leagues (Ekstraklasa to 3. Liga) + Regional leagues
 - [x] Sample clubs data for major cities
 - [x] Season 2024/2025 standings preview
+
+
+## Club Structure & Teams (Completed)
+- [x] Load full structure upfront (regions, districts, leagues, clubs)
+- [x] Add teams per club (seniorzy, juniorzy, trampkarze, etc.)
+- [x] Team selection step after club selection (5-step wizard)
+- [x] League table only after team is selected
+- [x] Update season to 2025/2026
+- [x] Age group badges with colors (SEN, U19, U17, U15, U13, U11, U9, U7)
+- [x] Club search within district

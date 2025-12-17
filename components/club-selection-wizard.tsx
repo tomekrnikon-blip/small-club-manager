@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,26 +8,27 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
+import Animated, { FadeInRight } from 'react-native-reanimated';
 import { ThemedText } from '@/components/themed-text';
 import { AppColors, Spacing, Radius } from '@/constants/theme';
 import {
   REGIONS,
   getDistrictsForRegion,
-  getLeaguesForDistrict,
-  getClubsForDistrictAndLeague,
+  getClubsForDistrict,
   searchClubsByName,
-  getSeasonData,
+  getSeasonDataForTeam,
   Club,
   District,
-  League,
+  Team,
   SeasonData,
+  AGE_GROUP_LABELS,
+  CURRENT_SEASON,
 } from '@/lib/polish-football-data';
 
-type Step = 'region' | 'district' | 'league' | 'club' | 'confirm';
+type Step = 'region' | 'district' | 'club' | 'team' | 'confirm';
 
 interface ClubSelectionWizardProps {
-  onComplete: (club: Club, seasonData: SeasonData | null) => void;
+  onComplete: (club: Club, team: Team, seasonData: SeasonData | null) => void;
   onCancel: () => void;
 }
 
@@ -35,19 +36,14 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
   const [step, setStep] = useState<Step>('region');
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<District | null>(null);
-  const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [seasonData, setSeasonData] = useState<SeasonData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const districts = selectedRegion ? getDistrictsForRegion(selectedRegion) : [];
-  const leagues = selectedDistrict ? getLeaguesForDistrict(selectedDistrict.code) : [];
-  const clubs = selectedDistrict && selectedLeague 
-    ? getClubsForDistrictAndLeague(selectedDistrict.code, selectedLeague.code)
-    : [];
-
-  // Search results
+  const clubs = selectedDistrict ? getClubsForDistrict(selectedDistrict.code) : [];
   const searchResults = searchQuery.length >= 2 
     ? searchClubsByName(searchQuery, selectedDistrict?.code)
     : [];
@@ -55,38 +51,38 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
   const handleSelectRegion = (regionCode: string) => {
     setSelectedRegion(regionCode);
     setSelectedDistrict(null);
-    setSelectedLeague(null);
     setSelectedClub(null);
+    setSelectedTeam(null);
     setStep('district');
   };
 
   const handleSelectDistrict = (district: District) => {
     setSelectedDistrict(district);
-    setSelectedLeague(null);
     setSelectedClub(null);
-    setStep('league');
-  };
-
-  const handleSelectLeague = (league: League) => {
-    setSelectedLeague(league);
-    setSelectedClub(null);
+    setSelectedTeam(null);
     setStep('club');
   };
 
-  const handleSelectClub = async (club: Club) => {
+  const handleSelectClub = (club: Club) => {
     setSelectedClub(club);
+    setSelectedTeam(null);
+    setStep('team');
+  };
+
+  const handleSelectTeam = async (team: Team) => {
+    setSelectedTeam(team);
     setIsLoading(true);
     
-    // Fetch season data
-    const data = getSeasonData(club.id);
+    // Fetch season data only after team selection
+    const data = getSeasonDataForTeam(team.id);
     setSeasonData(data);
     setIsLoading(false);
     setStep('confirm');
   };
 
   const handleConfirm = () => {
-    if (selectedClub) {
-      onComplete(selectedClub, seasonData);
+    if (selectedClub && selectedTeam) {
+      onComplete(selectedClub, selectedTeam, seasonData);
     }
   };
 
@@ -96,17 +92,18 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
         setStep('region');
         setSelectedRegion(null);
         break;
-      case 'league':
+      case 'club':
         setStep('district');
         setSelectedDistrict(null);
+        setSearchQuery('');
         break;
-      case 'club':
-        setStep('league');
-        setSelectedLeague(null);
-        break;
-      case 'confirm':
+      case 'team':
         setStep('club');
         setSelectedClub(null);
+        break;
+      case 'confirm':
+        setStep('team');
+        setSelectedTeam(null);
         setSeasonData(null);
         break;
     }
@@ -116,8 +113,8 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
     switch (step) {
       case 'region': return 'Wybierz województwo';
       case 'district': return 'Wybierz okręg (OZPN)';
-      case 'league': return 'Wybierz ligę';
       case 'club': return 'Wybierz klub';
+      case 'team': return 'Wybierz drużynę';
       case 'confirm': return 'Potwierdź wybór';
     }
   };
@@ -126,8 +123,8 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
     switch (step) {
       case 'region': return 1;
       case 'district': return 2;
-      case 'league': return 3;
-      case 'club': return 4;
+      case 'club': return 3;
+      case 'team': return 4;
       case 'confirm': return 5;
     }
   };
@@ -141,11 +138,11 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
     if (selectedDistrict) {
       items.push(selectedDistrict.name);
     }
-    if (selectedLeague) {
-      items.push(selectedLeague.name);
-    }
     if (selectedClub) {
       items.push(selectedClub.name);
+    }
+    if (selectedTeam) {
+      items.push(AGE_GROUP_LABELS[selectedTeam.ageGroup]);
     }
     
     if (items.length === 0) return null;
@@ -234,50 +231,6 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
           </Animated.View>
         )}
 
-        {step === 'league' && (
-          <Animated.View entering={FadeInRight.duration(300)}>
-            <ThemedText style={styles.sectionTitle}>Ligi centralne</ThemedText>
-            <View style={styles.list}>
-              {leagues.filter(l => l.level <= 4).map(league => (
-                <Pressable
-                  key={league.code}
-                  style={styles.listItem}
-                  onPress={() => handleSelectLeague(league)}
-                >
-                  <View style={[styles.levelBadge, { backgroundColor: getLevelColor(league.level) }]}>
-                    <ThemedText style={styles.levelBadgeText}>{league.level}</ThemedText>
-                  </View>
-                  <View style={styles.listItemContent}>
-                    <ThemedText style={styles.listItemTitle}>{league.name}</ThemedText>
-                    <ThemedText style={styles.listItemSubtitle}>Poziom {league.level}</ThemedText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={AppColors.textDisabled} />
-                </Pressable>
-              ))}
-            </View>
-            
-            <ThemedText style={[styles.sectionTitle, { marginTop: Spacing.lg }]}>Ligi regionalne</ThemedText>
-            <View style={styles.list}>
-              {leagues.filter(l => l.level > 4).map(league => (
-                <Pressable
-                  key={league.code}
-                  style={styles.listItem}
-                  onPress={() => handleSelectLeague(league)}
-                >
-                  <View style={[styles.levelBadge, { backgroundColor: getLevelColor(league.level) }]}>
-                    <ThemedText style={styles.levelBadgeText}>{league.level}</ThemedText>
-                  </View>
-                  <View style={styles.listItemContent}>
-                    <ThemedText style={styles.listItemTitle}>{league.name}</ThemedText>
-                    <ThemedText style={styles.listItemSubtitle}>Poziom {league.level}</ThemedText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color={AppColors.textDisabled} />
-                </Pressable>
-              ))}
-            </View>
-          </Animated.View>
-        )}
-
         {step === 'club' && (
           <Animated.View entering={FadeInRight.duration(300)}>
             {/* Search */}
@@ -305,11 +258,11 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
                   <ThemedText style={styles.emptyStateText}>
                     {searchQuery.length >= 2 
                       ? 'Nie znaleziono klubów'
-                      : 'Brak klubów w tej lidze'}
+                      : 'Brak klubów w tym okręgu'}
                   </ThemedText>
                 </View>
               ) : (
-                (searchQuery.length >= 2 ? searchResults : clubs).map(club => (
+                (searchQuery.length >= 2 ? searchResults : clubs).map((club: Club) => (
                   <Pressable
                     key={club.id}
                     style={styles.clubItem}
@@ -321,6 +274,9 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
                     <View style={styles.clubInfo}>
                       <ThemedText style={styles.clubName}>{club.name}</ThemedText>
                       <ThemedText style={styles.clubCity}>{club.city}</ThemedText>
+                      <ThemedText style={styles.clubTeams}>
+                        {club.teams.length} {club.teams.length === 1 ? 'drużyna' : club.teams.length < 5 ? 'drużyny' : 'drużyn'}
+                      </ThemedText>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color={AppColors.textDisabled} />
                   </Pressable>
@@ -330,16 +286,55 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
           </Animated.View>
         )}
 
-        {step === 'confirm' && selectedClub && (
+        {step === 'team' && selectedClub && (
+          <Animated.View entering={FadeInRight.duration(300)}>
+            <View style={styles.clubHeader}>
+              <View style={styles.clubHeaderIcon}>
+                <Ionicons name="football" size={32} color={AppColors.primary} />
+              </View>
+              <View>
+                <ThemedText style={styles.clubHeaderName}>{selectedClub.name}</ThemedText>
+                <ThemedText style={styles.clubHeaderCity}>{selectedClub.city}</ThemedText>
+              </View>
+            </View>
+
+            <ThemedText style={styles.sectionTitle}>Wybierz drużynę</ThemedText>
+            <View style={styles.list}>
+              {selectedClub.teams.map(team => (
+                <Pressable
+                  key={team.id}
+                  style={styles.teamItem}
+                  onPress={() => handleSelectTeam(team)}
+                >
+                  <View style={[styles.teamBadge, getAgeGroupColor(team.ageGroup)]}>
+                    <ThemedText style={styles.teamBadgeText}>
+                      {getAgeGroupShort(team.ageGroup)}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.teamInfo}>
+                    <ThemedText style={styles.teamName}>{team.name}</ThemedText>
+                    <ThemedText style={styles.teamLeague}>{team.leagueName}</ThemedText>
+                    <ThemedText style={styles.teamAgeGroup}>
+                      {AGE_GROUP_LABELS[team.ageGroup]}
+                    </ThemedText>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={AppColors.textDisabled} />
+                </Pressable>
+              ))}
+            </View>
+          </Animated.View>
+        )}
+
+        {step === 'confirm' && selectedClub && selectedTeam && (
           <Animated.View entering={FadeInRight.duration(300)}>
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={AppColors.primary} />
-                <ThemedText style={styles.loadingText}>Pobieranie danych...</ThemedText>
+                <ThemedText style={styles.loadingText}>Pobieranie tabeli...</ThemedText>
               </View>
             ) : (
               <>
-                {/* Club Card */}
+                {/* Club & Team Card */}
                 <View style={styles.confirmCard}>
                   <View style={styles.confirmClubHeader}>
                     <View style={styles.confirmClubIcon}>
@@ -351,10 +346,24 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
                     </View>
                   </View>
                   
+                  <View style={styles.confirmTeamBadge}>
+                    <View style={[styles.teamBadgeSmall, getAgeGroupColor(selectedTeam.ageGroup)]}>
+                      <ThemedText style={styles.teamBadgeTextSmall}>
+                        {getAgeGroupShort(selectedTeam.ageGroup)}
+                      </ThemedText>
+                    </View>
+                    <View>
+                      <ThemedText style={styles.confirmTeamName}>{selectedTeam.name}</ThemedText>
+                      <ThemedText style={styles.confirmTeamLeague}>{selectedTeam.leagueName}</ThemedText>
+                    </View>
+                  </View>
+                  
                   <View style={styles.confirmDetails}>
                     <View style={styles.confirmDetailRow}>
-                      <ThemedText style={styles.confirmDetailLabel}>Liga:</ThemedText>
-                      <ThemedText style={styles.confirmDetailValue}>{selectedLeague?.name}</ThemedText>
+                      <ThemedText style={styles.confirmDetailLabel}>Kategoria:</ThemedText>
+                      <ThemedText style={styles.confirmDetailValue}>
+                        {AGE_GROUP_LABELS[selectedTeam.ageGroup]}
+                      </ThemedText>
                     </View>
                     <View style={styles.confirmDetailRow}>
                       <ThemedText style={styles.confirmDetailLabel}>Okręg:</ThemedText>
@@ -362,7 +371,7 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
                     </View>
                     <View style={styles.confirmDetailRow}>
                       <ThemedText style={styles.confirmDetailLabel}>Sezon:</ThemedText>
-                      <ThemedText style={styles.confirmDetailValue}>{seasonData?.season || 'Brak danych'}</ThemedText>
+                      <ThemedText style={styles.confirmDetailValue}>{CURRENT_SEASON}</ThemedText>
                     </View>
                   </View>
                 </View>
@@ -374,23 +383,25 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
                       Tabela {seasonData.leagueName}
                     </ThemedText>
                     
-                    {/* Find club position */}
                     {(() => {
-                      const clubStanding = seasonData.standings.find(s => s.clubId === selectedClub.id);
-                      if (clubStanding) {
+                      const teamStanding = seasonData.standings.find(s => s.teamId === selectedTeam.id);
+                      if (teamStanding) {
                         return (
                           <View style={styles.positionCard}>
                             <View style={styles.positionBadge}>
-                              <ThemedText style={styles.positionNumber}>{clubStanding.position}</ThemedText>
+                              <ThemedText style={styles.positionNumber}>{teamStanding.position}</ThemedText>
                             </View>
                             <View style={styles.positionStats}>
-                              <ThemedText style={styles.positionPoints}>{clubStanding.points} pkt</ThemedText>
+                              <ThemedText style={styles.positionPoints}>{teamStanding.points} pkt</ThemedText>
                               <ThemedText style={styles.positionRecord}>
-                                {clubStanding.wins}W {clubStanding.draws}R {clubStanding.losses}P
+                                {teamStanding.wins}W {teamStanding.draws}R {teamStanding.losses}P
+                              </ThemedText>
+                              <ThemedText style={styles.positionGoals}>
+                                Bramki: {teamStanding.goalsFor}:{teamStanding.goalsAgainst}
                               </ThemedText>
                             </View>
                             <View style={styles.formContainer}>
-                              {clubStanding.form.map((result, i) => (
+                              {teamStanding.form.map((result, i) => (
                                 <View
                                   key={i}
                                   style={[
@@ -414,7 +425,7 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
 
                 {/* Confirm Button */}
                 <Pressable style={styles.confirmButton} onPress={handleConfirm}>
-                  <ThemedText style={styles.confirmButtonText}>Wybierz ten klub</ThemedText>
+                  <ThemedText style={styles.confirmButtonText}>Wybierz tę drużynę</ThemedText>
                   <Ionicons name="checkmark-circle" size={24} color="#fff" />
                 </Pressable>
               </>
@@ -426,13 +437,31 @@ export function ClubSelectionWizard({ onComplete, onCancel }: ClubSelectionWizar
   );
 }
 
-function getLevelColor(level: number): string {
-  switch (level) {
-    case 1: return '#FFD700'; // Gold
-    case 2: return '#C0C0C0'; // Silver
-    case 3: return '#CD7F32'; // Bronze
-    case 4: return AppColors.primary;
-    default: return AppColors.secondary;
+function getAgeGroupColor(ageGroup: Team['ageGroup']): { backgroundColor: string } {
+  switch (ageGroup) {
+    case 'senior': return { backgroundColor: AppColors.primary };
+    case 'junior-starszy': return { backgroundColor: '#3B82F6' };
+    case 'junior-mlodszy': return { backgroundColor: '#8B5CF6' };
+    case 'trampkarz-starszy': return { backgroundColor: '#EC4899' };
+    case 'trampkarz-mlodszy': return { backgroundColor: '#F97316' };
+    case 'zak': return { backgroundColor: '#EAB308' };
+    case 'orlik': return { backgroundColor: '#22C55E' };
+    case 'bambino': return { backgroundColor: '#06B6D4' };
+    default: return { backgroundColor: AppColors.secondary };
+  }
+}
+
+function getAgeGroupShort(ageGroup: Team['ageGroup']): string {
+  switch (ageGroup) {
+    case 'senior': return 'SEN';
+    case 'junior-starszy': return 'U19';
+    case 'junior-mlodszy': return 'U17';
+    case 'trampkarz-starszy': return 'U15';
+    case 'trampkarz-mlodszy': return 'U13';
+    case 'zak': return 'U11';
+    case 'orlik': return 'U9';
+    case 'bambino': return 'U7';
+    default: return '?';
   }
 }
 
@@ -548,20 +577,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: AppColors.textSecondary,
     marginBottom: Spacing.sm,
+    marginTop: Spacing.lg,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-  },
-  levelBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  levelBadgeText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#fff',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -617,6 +635,87 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     marginTop: 2,
   },
+  clubTeams: {
+    fontSize: 12,
+    color: AppColors.primary,
+    marginTop: 4,
+  },
+  clubHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.md,
+  },
+  clubHeaderIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: `${AppColors.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clubHeaderName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+  },
+  clubHeaderCity: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+  },
+  teamItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    gap: Spacing.md,
+  },
+  teamBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teamBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  teamBadgeSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teamBadgeTextSmall: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  teamInfo: {
+    flex: 1,
+  },
+  teamName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+  },
+  teamLeague: {
+    fontSize: 14,
+    color: AppColors.primary,
+    marginTop: 2,
+  },
+  teamAgeGroup: {
+    fontSize: 12,
+    color: AppColors.textSecondary,
+    marginTop: 2,
+  },
   loadingContainer: {
     alignItems: 'center',
     paddingVertical: Spacing.xxl,
@@ -637,7 +736,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   confirmClubIcon: {
     width: 72,
@@ -659,6 +758,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: AppColors.textSecondary,
     marginTop: 4,
+  },
+  confirmTeamBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: `${AppColors.primary}10`,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.md,
+  },
+  confirmTeamName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: AppColors.textPrimary,
+  },
+  confirmTeamLeague: {
+    fontSize: 14,
+    color: AppColors.primary,
   },
   confirmDetails: {
     gap: Spacing.sm,
@@ -720,6 +837,11 @@ const styles = StyleSheet.create({
   positionRecord: {
     fontSize: 14,
     color: AppColors.textSecondary,
+    marginTop: 2,
+  },
+  positionGoals: {
+    fontSize: 12,
+    color: AppColors.textDisabled,
     marginTop: 2,
   },
   formContainer: {
