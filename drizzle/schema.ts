@@ -815,3 +815,43 @@ export const changeHistoryRelations = relations(changeHistory, ({ one }) => ({
   user: one(users, { fields: [changeHistory.userId], references: [users.id] }),
   reverter: one(users, { fields: [changeHistory.revertedBy], references: [users.id] }),
 }));
+
+
+/**
+ * Achievements - badge definitions
+ */
+export const achievements = mysqlTable("achievements", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  category: mysqlEnum("category", ["goals", "assists", "attendance", "ratings", "matches", "special"]).notNull(),
+  icon: varchar("icon", { length: 50 }).notNull(),
+  color: varchar("color", { length: 20 }).notNull(),
+  threshold: int("threshold").notNull(),
+  points: int("points").default(10).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = typeof achievements.$inferInsert;
+
+/**
+ * Player achievements - unlocked achievements per player
+ */
+export const playerAchievements = mysqlTable("playerAchievements", {
+  id: int("id").autoincrement().primaryKey(),
+  playerId: int("playerId").notNull(),
+  achievementId: int("achievementId").notNull(),
+  unlockedAt: timestamp("unlockedAt").defaultNow().notNull(),
+  currentValue: int("currentValue").default(0).notNull(),
+  notified: boolean("notified").default(false).notNull(),
+});
+
+export type PlayerAchievement = typeof playerAchievements.$inferSelect;
+export type InsertPlayerAchievement = typeof playerAchievements.$inferInsert;
+
+export const playerAchievementsRelations = relations(playerAchievements, ({ one }) => ({
+  player: one(players, { fields: [playerAchievements.playerId], references: [players.id] }),
+  achievement: one(achievements, { fields: [playerAchievements.achievementId], references: [achievements.id] }),
+}));

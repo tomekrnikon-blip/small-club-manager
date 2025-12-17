@@ -238,6 +238,21 @@ export default function MoreScreen() {
             onPress={() => router.push("/player-dashboard" as any)}
           />
           <MenuItem
+            icon="emoji-events"
+            label="Osiągnięcia"
+            onPress={() => router.push("/player-achievements" as any)}
+          />
+          <MenuItem
+            icon="compare-arrows"
+            label="Porównanie zawodników"
+            onPress={() => router.push("/player-comparison" as any)}
+          />
+          <MenuItem
+            icon="trending-up"
+            label="Trendy rozwoju"
+            onPress={() => router.push("/player-trends" as any)}
+          />
+          <MenuItem
             icon="person"
             label="Panel rodzica"
             onPress={() => router.push("/parent-panel" as any)}

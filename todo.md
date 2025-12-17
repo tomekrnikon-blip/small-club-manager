@@ -344,3 +344,26 @@
 - [x] Performance metrics (attendance rate, average rating, cards)
 - [x] Quick actions (callups, surveys, messages, stats)
 - [x] Player dashboard screen (player-dashboard.tsx)
+
+
+## Player Achievements System (Completed)
+- [x] Database schema for achievements and player_achievements
+- [x] Achievement types: goals milestones, attendance streaks, rating excellence
+- [x] Badge icons and visual design
+- [x] Achievement progress tracking
+- [x] Achievements display in player profile (player-achievements.tsx)
+
+## Player Comparison (Completed)
+- [x] Select multiple players for comparison
+- [x] Side-by-side stats comparison view
+- [x] Radar chart for skill comparison
+- [x] Visual comparison bars
+- [x] Player comparison screen (player-comparison.tsx)
+
+## Development Trends (Completed)
+- [x] Rating trends over time chart
+- [x] Goals/assists bar chart progression
+- [x] Attendance trend visualization
+- [x] Time range selector (3m, 6m, 1y, all)
+- [x] Period summary statistics
+- [x] Development trends screen (player-trends.tsx)
