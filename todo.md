@@ -881,3 +881,10 @@
 - [x] Custom club colors for templates (primaryColor, secondaryColor, accentColor in clubs table)
 - [x] Club color picker in settings (club-colors.tsx)
 - [x] Apply club colors to all templates ("Klubowy" template option)
+
+
+## Club Logo in Social Media Templates (Completed)
+- [x] Club logo upload functionality (uses existing logoUrl from clubs table)
+- [x] Display club logo in social share templates
+- [x] Replace SKM logo with club logo when available
+- [x] Pass club colors and logo to SocialShareCard component

@@ -30,6 +30,13 @@ export default function MatchDetailScreen() {
     { enabled: !!matchId && isAuthenticated }
   );
 
+  // Get club data for logo
+  const { data: clubs } = trpc.clubs.list.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+  const club = clubs?.[0]; // Use first club
+
   const deleteMutation = trpc.matches.delete.useMutation({
     onSuccess: () => {
       utils.matches.list.invalidate();
@@ -325,8 +332,9 @@ export default function MatchDetailScreen() {
           matchTime: match.matchTime,
           location: match.location,
           league: match.season,
-          clubName: "Mój Klub", // TODO: Get from club context
-          scorers: [], // TODO: Get from match stats
+          clubName: club?.name || "Mój Klub",
+          clubLogo: club?.logoUrl || undefined,
+          scorers: [],
           stats: {
             totalGoals: match.goalsScored || 0,
             totalAssists: 0,
@@ -336,6 +344,11 @@ export default function MatchDetailScreen() {
           },
         }}
         type={shareType}
+        clubColors={club ? {
+          primary: club.primaryColor || "#22c55e",
+          secondary: club.secondaryColor || "#1e3a5f",
+          accent: club.accentColor || "#ffffff",
+        } : undefined}
       />
     </ThemedView>
   );

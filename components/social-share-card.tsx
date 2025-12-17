@@ -354,21 +354,29 @@ export function SocialShareCard({ visible, onClose, matchData, type, clubColors 
         {isElegant && (
           <View style={[styles.elegantBorder, { borderColor: accentColor }]} />
         )}
-        {/* Header with SKM Logo */}
+        {/* Header with Club Logo (or SKM Logo fallback) */}
         <View style={styles.templateHeader}>
           <View style={styles.logoContainer}>
-            <Image
-              source={require("@/assets/images/icon.png")}
-              style={styles.skmLogo}
-              contentFit="contain"
-            />
+            {matchData.clubLogo ? (
+              <Image
+                source={{ uri: matchData.clubLogo }}
+                style={styles.skmLogo}
+                contentFit="contain"
+              />
+            ) : (
+              <Image
+                source={require("@/assets/images/icon.png")}
+                style={styles.skmLogo}
+                contentFit="contain"
+              />
+            )}
           </View>
           <View style={styles.headerTextContainer}>
             <ThemedText style={[styles.clubNameText, { color: accentColor }]}>
               {matchData.clubName}
             </ThemedText>
             <ThemedText style={[styles.appBranding, { color: secondaryText }]}>
-              Small Club Manager
+              {matchData.clubLogo ? "" : "Small Club Manager"}
             </ThemedText>
           </View>
         </View>
