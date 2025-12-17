@@ -716,3 +716,102 @@ export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
 export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one }) => ({
   user: one(users, { fields: [pushSubscriptions.userId], references: [users.id] }),
 }));
+
+
+/**
+ * Surveys table - polls and feedback forms for parents
+ */
+export const surveys = mysqlTable("surveys", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  createdBy: int("createdBy").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  surveyType: mysqlEnum("surveyType", ["poll", "feedback", "date_vote"]).default("poll").notNull(),
+  status: mysqlEnum("status", ["active", "closed", "draft"]).default("active").notNull(),
+  allowMultiple: boolean("allowMultiple").default(false).notNull(),
+  isAnonymous: boolean("isAnonymous").default(false).notNull(),
+  endsAt: timestamp("endsAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Survey = typeof surveys.$inferSelect;
+export type InsertSurvey = typeof surveys.$inferInsert;
+
+/**
+ * Survey options - choices for polls and date voting
+ */
+export const surveyOptions = mysqlTable("surveyOptions", {
+  id: int("id").autoincrement().primaryKey(),
+  surveyId: int("surveyId").notNull(),
+  optionText: varchar("optionText", { length: 255 }).notNull(),
+  optionDate: timestamp("optionDate"),
+  voteCount: int("voteCount").default(0).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SurveyOption = typeof surveyOptions.$inferSelect;
+export type InsertSurveyOption = typeof surveyOptions.$inferInsert;
+
+/**
+ * Survey votes - user votes on survey options
+ */
+export const surveyVotes = mysqlTable("surveyVotes", {
+  id: int("id").autoincrement().primaryKey(),
+  surveyId: int("surveyId").notNull(),
+  optionId: int("optionId").notNull(),
+  userId: int("userId").notNull(),
+  comment: text("comment"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SurveyVote = typeof surveyVotes.$inferSelect;
+export type InsertSurveyVote = typeof surveyVotes.$inferInsert;
+
+export const surveysRelations = relations(surveys, ({ one, many }) => ({
+  club: one(clubs, { fields: [surveys.clubId], references: [clubs.id] }),
+  creator: one(users, { fields: [surveys.createdBy], references: [users.id] }),
+  options: many(surveyOptions),
+}));
+
+export const surveyOptionsRelations = relations(surveyOptions, ({ one, many }) => ({
+  survey: one(surveys, { fields: [surveyOptions.surveyId], references: [surveys.id] }),
+  votes: many(surveyVotes),
+}));
+
+export const surveyVotesRelations = relations(surveyVotes, ({ one }) => ({
+  survey: one(surveys, { fields: [surveyVotes.surveyId], references: [surveys.id] }),
+  option: one(surveyOptions, { fields: [surveyVotes.optionId], references: [surveyOptions.id] }),
+  user: one(users, { fields: [surveyVotes.userId], references: [users.id] }),
+}));
+
+/**
+ * Change history - audit trail for schedule changes
+ */
+export const changeHistory = mysqlTable("changeHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  userId: int("userId").notNull(),
+  entityType: mysqlEnum("entityType", ["training", "match", "player", "team", "finance"]).notNull(),
+  entityId: int("entityId").notNull(),
+  action: mysqlEnum("action", ["create", "update", "delete"]).notNull(),
+  fieldName: varchar("fieldName", { length: 100 }),
+  oldValue: text("oldValue"),
+  newValue: text("newValue"),
+  description: text("description"),
+  canRevert: boolean("canRevert").default(true).notNull(),
+  revertedAt: timestamp("revertedAt"),
+  revertedBy: int("revertedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChangeHistory = typeof changeHistory.$inferSelect;
+export type InsertChangeHistory = typeof changeHistory.$inferInsert;
+
+export const changeHistoryRelations = relations(changeHistory, ({ one }) => ({
+  club: one(clubs, { fields: [changeHistory.clubId], references: [clubs.id] }),
+  user: one(users, { fields: [changeHistory.userId], references: [users.id] }),
+  reverter: one(users, { fields: [changeHistory.revertedBy], references: [users.id] }),
+}));

@@ -367,3 +367,214 @@ Wiadomość wygenerowana automatycznie przez Small Club Manager
 
   return sendClubEmail(clubId, recipientEmail, subject, htmlBody, textBody);
 }
+
+
+// ============================================
+// WEEKLY SUMMARY EMAILS
+// ============================================
+
+interface WeeklySummaryData {
+  playerName: string;
+  parentName: string;
+  clubName: string;
+  weekStart: Date;
+  weekEnd: Date;
+  upcomingTrainings: Array<{
+    date: Date;
+    time: string;
+    location: string;
+  }>;
+  upcomingMatches: Array<{
+    date: Date;
+    opponent: string;
+    location: string;
+  }>;
+  attendanceRate: number;
+}
+
+/**
+ * Generate weekly summary email HTML
+ */
+function generateWeeklySummaryHtml(data: WeeklySummaryData): { html: string; text: string; subject: string } {
+  const formatDate = (date: Date) => date.toLocaleDateString('pl-PL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  const trainingsHtml = data.upcomingTrainings.length > 0
+    ? data.upcomingTrainings.map(t => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${formatDate(t.date)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${t.time}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${t.location}</td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="3" style="padding: 12px; text-align: center; color: #64748b;">Brak zaplanowanych treningów</td></tr>';
+
+  const matchesHtml = data.upcomingMatches.length > 0
+    ? data.upcomingMatches.map(m => `
+        <tr>
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${formatDate(m.date)}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">vs ${m.opponent}</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">${m.location}</td>
+        </tr>
+      `).join('')
+    : '<tr><td colspan="3" style="padding: 12px; text-align: center; color: #64748b;">Brak zaplanowanych meczów</td></tr>';
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">📊 Podsumowanie tygodnia</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0;">${data.clubName}</p>
+      </div>
+      <div style="padding: 20px; background: #f8fafc;">
+        <p>Cześć <strong>${data.parentName}</strong>! 👋</p>
+        <p>Oto podsumowanie tygodnia dla <strong>${data.playerName}</strong> (${formatDate(data.weekStart)} - ${formatDate(data.weekEnd)}).</p>
+        
+        <div style="background: #f0fdf4; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center;">
+          <div style="font-size: 36px; font-weight: bold; color: #22c55e;">${data.attendanceRate}%</div>
+          <div style="color: #64748b; font-size: 14px; margin-top: 5px;">Frekwencja w tym tygodniu</div>
+        </div>
+        
+        <h2 style="color: #22c55e; font-size: 18px; margin: 30px 0 15px;">📅 Nadchodzące treningi</h2>
+        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px;">
+          <thead>
+            <tr style="background: #f8fafc;">
+              <th style="padding: 12px; text-align: left; font-size: 12px; color: #64748b;">Data</th>
+              <th style="padding: 12px; text-align: left; font-size: 12px; color: #64748b;">Godzina</th>
+              <th style="padding: 12px; text-align: left; font-size: 12px; color: #64748b;">Miejsce</th>
+            </tr>
+          </thead>
+          <tbody>${trainingsHtml}</tbody>
+        </table>
+        
+        <h2 style="color: #a855f7; font-size: 18px; margin: 30px 0 15px;">⚽ Nadchodzące mecze</h2>
+        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px;">
+          <thead>
+            <tr style="background: #f8fafc;">
+              <th style="padding: 12px; text-align: left; font-size: 12px; color: #64748b;">Data</th>
+              <th style="padding: 12px; text-align: left; font-size: 12px; color: #64748b;">Przeciwnik</th>
+              <th style="padding: 12px; text-align: left; font-size: 12px; color: #64748b;">Miejsce</th>
+            </tr>
+          </thead>
+          <tbody>${matchesHtml}</tbody>
+        </table>
+        
+        <p style="color: #64748b; font-size: 12px; margin-top: 24px; text-align: center;">
+          Wiadomość wygenerowana automatycznie przez Small Club Manager
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = `
+Podsumowanie tygodnia - ${data.clubName}
+
+Cześć ${data.parentName}!
+
+Podsumowanie dla ${data.playerName} (${formatDate(data.weekStart)} - ${formatDate(data.weekEnd)}).
+
+Frekwencja: ${data.attendanceRate}%
+
+Nadchodzące treningi:
+${data.upcomingTrainings.length > 0 
+  ? data.upcomingTrainings.map(t => `- ${formatDate(t.date)} o ${t.time} w ${t.location}`).join('\n')
+  : 'Brak zaplanowanych treningów'}
+
+Nadchodzące mecze:
+${data.upcomingMatches.length > 0
+  ? data.upcomingMatches.map(m => `- ${formatDate(m.date)} vs ${m.opponent} w ${m.location}`).join('\n')
+  : 'Brak zaplanowanych meczów'}
+  `;
+
+  return {
+    subject: `📊 Podsumowanie tygodnia - ${data.playerName} | ${data.clubName}`,
+    html,
+    text,
+  };
+}
+
+/**
+ * Send weekly summary email to a parent
+ */
+export async function sendWeeklySummaryEmail(
+  clubId: number,
+  parentEmail: string,
+  data: WeeklySummaryData
+): Promise<EmailResult> {
+  const email = generateWeeklySummaryHtml(data);
+  return sendClubEmail(clubId, parentEmail, email.subject, email.html, email.text);
+}
+
+/**
+ * Send event reminder email to a parent
+ */
+export async function sendEventReminderEmail(
+  clubId: number,
+  parentEmail: string,
+  parentName: string,
+  playerName: string,
+  eventType: 'training' | 'match',
+  eventDate: Date,
+  eventTime: string,
+  location: string,
+  opponent?: string
+): Promise<EmailResult> {
+  const formatDate = (date: Date) => date.toLocaleDateString('pl-PL', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  const eventTitle = eventType === 'training' ? 'Trening' : `Mecz vs ${opponent}`;
+  const eventIcon = eventType === 'training' ? '🏃' : '⚽';
+  const eventColor = eventType === 'training' ? '#f59e0b' : '#a855f7';
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: ${eventColor}; padding: 20px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 10px;">${eventIcon}</div>
+        <h1 style="color: white; margin: 0;">Przypomnienie</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0;">${eventTitle}</p>
+      </div>
+      <div style="padding: 20px; background: #f8fafc;">
+        <p>Cześć <strong>${parentName}</strong>! 👋</p>
+        <p>Przypominamy o nadchodzącym wydarzeniu dla <strong>${playerName}</strong>.</p>
+        
+        <div style="background: white; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <div style="margin-bottom: 15px;">
+            <div style="color: #64748b; font-size: 12px; text-transform: uppercase;">Data</div>
+            <div style="color: #1e293b; font-size: 16px; font-weight: 600;">${formatDate(eventDate)}</div>
+          </div>
+          <div style="margin-bottom: 15px;">
+            <div style="color: #64748b; font-size: 12px; text-transform: uppercase;">Godzina</div>
+            <div style="color: #1e293b; font-size: 16px; font-weight: 600;">${eventTime}</div>
+          </div>
+          <div>
+            <div style="color: #64748b; font-size: 12px; text-transform: uppercase;">Miejsce</div>
+            <div style="color: #1e293b; font-size: 16px; font-weight: 600;">${location}</div>
+          </div>
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; margin-top: 24px; text-align: center;">
+          Small Club Manager
+        </p>
+      </div>
+    </div>
+  `;
+
+  const text = `
+Przypomnienie - ${eventTitle}
+
+Cześć ${parentName}!
+
+Przypominamy o nadchodzącym wydarzeniu dla ${playerName}.
+
+Data: ${formatDate(eventDate)}
+Godzina: ${eventTime}
+Miejsce: ${location}
+  `;
+
+  return sendClubEmail(clubId, parentEmail, `${eventIcon} Przypomnienie: ${eventTitle} - ${playerName}`, html, text);
+}

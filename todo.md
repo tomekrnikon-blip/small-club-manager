@@ -303,3 +303,21 @@
 - [x] PDF/HTML/CSV export from team statistics dashboard
 - [x] Include charts and rankings in export
 - [x] Season summary report generation (statistics-export.tsx)
+
+
+## Email Notifications (Completed)
+- [x] Email service setup with templates (emailService.ts)
+- [x] Weekly summary emails for parents
+- [x] Event reminder emails
+- [x] Email preferences screen (email-settings.tsx)
+
+## Parent Surveys (Completed)
+- [x] Database schema for surveys and votes (surveys, surveyOptions, surveyVotes tables)
+- [x] Survey creation form for coaches
+- [x] Voting interface for parents (surveys.tsx)
+- [x] Survey results visualization
+
+## Change History (Completed)
+- [x] Audit log for schedule changes (changeHistory table)
+- [x] Change history viewer (change-history.tsx)
+- [x] Revert functionality for recent changes

@@ -258,6 +258,21 @@ export default function MoreScreen() {
             onPress={() => router.push("/push-settings" as any)}
           />
           <MenuItem
+            icon="email"
+            label="Powiadomienia email"
+            onPress={() => router.push("/email-settings" as any)}
+          />
+          <MenuItem
+            icon="poll"
+            label="Ankiety i głosowania"
+            onPress={() => router.push("/surveys" as any)}
+          />
+          <MenuItem
+            icon="history"
+            label="Historia zmian"
+            onPress={() => router.push("/change-history" as any)}
+          />
+          <MenuItem
             icon="assessment"
             label="Eksport statystyk"
             onPress={() => router.push("/statistics-export" as any)}

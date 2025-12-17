@@ -28,6 +28,10 @@ import {
   InsertParentChild, parentChildren,
   InsertMessage, messages,
   InsertPushSubscription, pushSubscriptions,
+  InsertSurvey, surveys,
+  InsertSurveyOption, surveyOptions,
+  InsertSurveyVote, surveyVotes,
+  InsertChangeHistory, changeHistory,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1360,4 +1364,116 @@ export async function getPushSubscriptionByEndpoint(endpoint: string) {
   if (!db) return undefined;
   const result = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint)).limit(1);
   return result[0];
+}
+
+
+// ============================================
+// SURVEYS FUNCTIONS
+// ============================================
+export async function getSurveysByClubId(clubId: number, status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (status) {
+    return db.select().from(surveys).where(and(eq(surveys.clubId, clubId), eq(surveys.status, status as any)));
+  }
+  return db.select().from(surveys).where(eq(surveys.clubId, clubId));
+}
+
+export async function getSurveyById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(surveys).where(eq(surveys.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createSurvey(data: InsertSurvey) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(surveys).values(data);
+  return result[0].insertId;
+}
+
+export async function updateSurvey(id: number, data: Partial<InsertSurvey>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(surveys).set(data).where(eq(surveys.id, id));
+}
+
+export async function getSurveyOptions(surveyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(surveyOptions).where(eq(surveyOptions.surveyId, surveyId)).orderBy(surveyOptions.sortOrder);
+}
+
+export async function createSurveyOption(data: InsertSurveyOption) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(surveyOptions).values(data);
+  return result[0].insertId;
+}
+
+export async function incrementSurveyOptionVoteCount(optionId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(surveyOptions)
+    .set({ voteCount: sql`${surveyOptions.voteCount} + 1` })
+    .where(eq(surveyOptions.id, optionId));
+}
+
+export async function getUserSurveyVote(surveyId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(surveyVotes)
+    .where(and(eq(surveyVotes.surveyId, surveyId), eq(surveyVotes.userId, userId)))
+    .limit(1);
+  return result[0];
+}
+
+export async function createSurveyVote(data: InsertSurveyVote) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(surveyVotes).values(data);
+  return result[0].insertId;
+}
+
+// ============================================
+// CHANGE HISTORY FUNCTIONS
+// ============================================
+export async function getChangeHistory(clubId: number, entityType?: string, limit: number = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  if (entityType) {
+    return db.select().from(changeHistory)
+      .where(and(eq(changeHistory.clubId, clubId), eq(changeHistory.entityType, entityType as any)))
+      .orderBy(desc(changeHistory.createdAt))
+      .limit(limit);
+  }
+  return db.select().from(changeHistory)
+    .where(eq(changeHistory.clubId, clubId))
+    .orderBy(desc(changeHistory.createdAt))
+    .limit(limit);
+}
+
+export async function getChangeHistoryById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(changeHistory).where(eq(changeHistory.id, id)).limit(1);
+  return result[0];
+}
+
+export async function createChangeHistory(data: InsertChangeHistory) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(changeHistory).values(data);
+  return result[0].insertId;
+}
+
+export async function markChangeReverted(id: number, revertedBy: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(changeHistory)
+    .set({ revertedAt: new Date(), revertedBy })
+    .where(eq(changeHistory.id, id));
 }

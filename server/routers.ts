@@ -2162,6 +2162,152 @@ export const appRouter = router({
       return db.getPushSubscriptionsByUserId(ctx.user.id);
     }),
   }),
+
+  // ============================================
+  // SURVEYS ROUTER
+  // ============================================
+  surveys: router({
+    list: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        status: z.enum(["active", "closed", "draft"]).optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const surveys = await db.getSurveysByClubId(input.clubId, input.status);
+        const result = [];
+        
+        for (const survey of surveys) {
+          const options = await db.getSurveyOptions(survey.id);
+          const userVote = await db.getUserSurveyVote(survey.id, ctx.user.id);
+          
+          result.push({
+            ...survey,
+            options,
+            totalVotes: options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0),
+            userVoted: !!userVote,
+          });
+        }
+        
+        return result;
+      }),
+    
+    create: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        title: z.string(),
+        description: z.string().optional(),
+        surveyType: z.enum(["poll", "feedback", "date_vote"]),
+        allowMultiple: z.boolean().optional(),
+        isAnonymous: z.boolean().optional(),
+        endsAt: z.date().optional(),
+        options: z.array(z.object({
+          optionText: z.string(),
+          optionDate: z.date().optional(),
+        })),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { options, ...surveyData } = input;
+        
+        const surveyId = await db.createSurvey({
+          ...surveyData,
+          createdBy: ctx.user.id,
+        });
+        
+        for (let i = 0; i < options.length; i++) {
+          await db.createSurveyOption({
+            surveyId,
+            optionText: options[i].optionText,
+            optionDate: options[i].optionDate,
+            sortOrder: i,
+          });
+        }
+        
+        return { id: surveyId };
+      }),
+    
+    vote: protectedProcedure
+      .input(z.object({
+        surveyId: z.number(),
+        optionIds: z.array(z.number()),
+        comment: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const survey = await db.getSurveyById(input.surveyId);
+        if (!survey) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Ankieta nie istnieje" });
+        }
+        
+        if (survey.status !== "active") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Ankieta jest zamknięta" });
+        }
+        
+        // Check if user already voted
+        const existingVote = await db.getUserSurveyVote(input.surveyId, ctx.user.id);
+        if (existingVote) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Już zagłosowałeś w tej ankiecie" });
+        }
+        
+        // Check multiple votes
+        if (!survey.allowMultiple && input.optionIds.length > 1) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Można wybrać tylko jedną opcję" });
+        }
+        
+        // Create votes
+        for (const optionId of input.optionIds) {
+          await db.createSurveyVote({
+            surveyId: input.surveyId,
+            optionId,
+            userId: ctx.user.id,
+            comment: input.comment,
+          });
+          
+          // Increment vote count
+          await db.incrementSurveyOptionVoteCount(optionId);
+        }
+        
+        return { success: true };
+      }),
+    
+    close: protectedProcedure
+      .input(z.object({ surveyId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.updateSurvey(input.surveyId, { status: "closed" });
+        return { success: true };
+      }),
+  }),
+
+  // ============================================
+  // CHANGE HISTORY ROUTER
+  // ============================================
+  changeHistory: router({
+    list: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        entityType: z.enum(["training", "match", "player", "team", "finance"]).optional(),
+        limit: z.number().optional().default(50),
+      }))
+      .query(async ({ input }) => {
+        return db.getChangeHistory(input.clubId, input.entityType, input.limit);
+      }),
+    
+    revert: protectedProcedure
+      .input(z.object({ changeId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const change = await db.getChangeHistoryById(input.changeId);
+        if (!change) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Zmiana nie istnieje" });
+        }
+        
+        if (!change.canRevert || change.revertedAt) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nie można cofnąć tej zmiany" });
+        }
+        
+        // Mark as reverted
+        await db.markChangeReverted(input.changeId, ctx.user.id);
+        
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
