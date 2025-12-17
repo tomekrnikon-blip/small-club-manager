@@ -725,3 +725,12 @@
 - [x] Sync status screen with import history (sync-status.tsx)
 - [x] Schedule change notifications (notificationService.ts)
 - [x] Last sync timestamp display
+
+
+## Sync Settings & Enhanced Notifications (Completed)
+- [x] Sync settings screen with frequency options (12h, 24h, 48h, manual)
+- [x] Enhanced change notifications with old vs new comparison (ScheduleChangeCard component)
+- [x] Connect to real league data APIs (FA Full-Time, KNVB, Fogis)
+- [x] Store sync preferences in AsyncStorage
+- [x] Link to sync history from import screen
+- [x] fetchLeagueDataForClub function for on-demand sync

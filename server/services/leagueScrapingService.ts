@@ -379,13 +379,72 @@ export async function scheduledSync(): Promise<void> {
   console.log("[LeagueScraping] Starting scheduled sync...");
   
   const enabledSources = getDataSources(true);
+  const results: { source: string; success: boolean; error?: string }[] = [];
   
   for (const source of enabledSources) {
     console.log(`[LeagueScraping] Syncing ${source.name}...`);
     
-    // In production, this would fetch and sync data for each enabled source
-    // based on the clubs that have selected leagues from this country
+    try {
+      let table: LeagueTableResponse | null = null;
+      
+      // Fetch data based on country
+      switch (source.countryCode) {
+        case "GB":
+          // FA Full-Time API
+          table = await fetchFAFullTimeTable("default-league");
+          break;
+        case "NL":
+          // KNVB API
+          table = await fetchKNVBTable("default-league");
+          break;
+        case "SE":
+          // Fogis scraping
+          table = await fetchFogisTable("default-league");
+          break;
+        default:
+          console.log(`[LeagueScraping] No implementation for ${source.countryCode}`);
+      }
+      
+      if (table && table.teams.length > 0) {
+        results.push({ source: source.name, success: true });
+        console.log(`[LeagueScraping] ${source.name}: ${table.teams.length} teams fetched`);
+      } else {
+        results.push({ source: source.name, success: false, error: "No data returned" });
+      }
+    } catch (error) {
+      console.error(`[LeagueScraping] Error syncing ${source.name}:`, error);
+      results.push({ source: source.name, success: false, error: String(error) });
+    }
   }
   
-  console.log("[LeagueScraping] Scheduled sync complete");
+  const successful = results.filter(r => r.success).length;
+  const failed = results.filter(r => !r.success).length;
+  
+  console.log(`[LeagueScraping] Scheduled sync complete: ${successful} successful, ${failed} failed`);
+}
+
+/**
+ * Fetch league data for a specific club
+ */
+export async function fetchLeagueDataForClub(
+  countryCode: string,
+  leagueId: string
+): Promise<LeagueTableResponse | null> {
+  const source = getDataSourceByCountry(countryCode);
+  
+  if (!source || !source.scrapingEnabled) {
+    console.log(`[LeagueScraping] Source not available for ${countryCode}`);
+    return null;
+  }
+  
+  switch (countryCode) {
+    case "GB":
+      return fetchFAFullTimeTable(leagueId);
+    case "NL":
+      return fetchKNVBTable(leagueId);
+    case "SE":
+      return fetchFogisTable(leagueId);
+    default:
+      return null;
+  }
 }

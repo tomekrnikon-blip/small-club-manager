@@ -232,12 +232,26 @@ export default function ImportMatchesScreen() {
         </Pressable>
 
         {/* Auto Sync Info */}
-        <View style={styles.autoSyncInfo}>
+        <Pressable 
+          style={styles.autoSyncInfo}
+          onPress={() => router.push('/sync-settings' as any)}
+        >
           <MaterialIcons name="schedule" size={20} color={AppColors.textSecondary} />
           <ThemedText style={styles.autoSyncText}>
             Automatyczna synchronizacja odbywa się co 24 godziny
           </ThemedText>
-        </View>
+          <MaterialIcons name="chevron-right" size={20} color={AppColors.textSecondary} />
+        </Pressable>
+
+        {/* Sync History Link */}
+        <Pressable 
+          style={[styles.historyLink, { borderColor }]}
+          onPress={() => router.push('/sync-status' as any)}
+        >
+          <MaterialIcons name="history" size={20} color={AppColors.primary} />
+          <ThemedText style={styles.historyLinkText}>Zobacz historię synchronizacji</ThemedText>
+          <MaterialIcons name="chevron-right" size={20} color={AppColors.primary} />
+        </Pressable>
       </ScrollView>
     </ThemedView>
   );
@@ -354,5 +368,21 @@ const styles = StyleSheet.create({
   },
   autoSyncText: {
     fontSize: 13,
+    flex: 1,
+  },
+  historyLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+  },
+  historyLinkText: {
+    fontSize: 14,
+    color: AppColors.primary,
+    flex: 1,
   },
 });
