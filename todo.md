@@ -888,3 +888,27 @@
 - [x] Display club logo in social share templates
 - [x] Replace SKM logo with club logo when available
 - [x] Pass club colors and logo to SocialShareCard component
+
+
+## Bug Fixes (In Progress)
+- [ ] Fix logout functionality not working
+
+
+## PZPN Integration (In Progress)
+- [ ] Club search with PZPN data
+- [ ] District/region selection (okręgi)
+- [ ] Team selection within club
+- [ ] Live league table from PZPN website
+- [ ] Fix logout functionality
+
+
+## PZPN Integration (Completed)
+- [x] Club search with PZPN database (sample data for demo)
+- [x] District/region selection (16 województw)
+- [x] Team selection within club
+- [x] Live league table component
+- [x] League table screen with legend
+- [x] Club setup with search/manual modes
+- [x] ClubSearch component with region filter
+- [x] LeagueTable component with standings
+- [x] PZPN client library (lib/pzpn-client.ts)
