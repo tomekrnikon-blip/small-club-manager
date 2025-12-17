@@ -486,3 +486,64 @@
 - [x] Grant/revoke permissions from manager panel
 - [x] Invitation restrictions based on sender's role (routers.ts)
 - [x] Role change restrictions based on hierarchy (routers.ts)
+
+
+## Non-Intrusive Ad Placement (In Progress)
+- [ ] Ad banner component that doesn't interfere with app usage
+- [ ] Strategic ad placement (bottom of screens, between sections)
+- [ ] Ad rotation and management
+- [ ] Respect user experience - no popups or overlays
+
+## Player Card Navigation (In Progress)
+- [ ] Clickable player cards in match lineup
+- [ ] Clickable player cards in training attendance
+- [ ] Clickable player cards in team roster
+- [ ] Clickable player cards in statistics screens
+- [ ] Navigate to player profile from any list
+
+## Expanded Match Statistics (In Progress)
+- [ ] Goals per player per match
+- [ ] Assists per player per match
+- [ ] Clean sheets for goalkeepers
+- [ ] Goals conceded for goalkeepers
+- [ ] Successful saves/interventions
+- [ ] Minutes played per match
+- [ ] Yellow/red cards per match
+- [ ] Match statistics input form
+
+## Team-Specific Rankings (In Progress)
+- [ ] Separate statistics for each team
+- [ ] Separate statistics for academy (szkółka)
+- [ ] Top scorer per team/season
+- [ ] Top assister per team/season
+- [ ] Best goalkeeper per team/season
+- [ ] Most minutes played per team/season
+- [ ] Best training attendance per team/season
+- [ ] Team rankings dashboard
+
+
+
+## Non-Intrusive Ad Placement (Completed)
+- [x] Ad banner component (ad-banner.tsx)
+- [x] Placement at bottom of screens, not blocking content
+- [x] Sponsored section in more menu
+- [x] Ad rotation and tracking
+
+## Player Card Navigation (Completed)
+- [x] Clickable player cards from all screens (player-card.tsx)
+- [x] Player detail screen with full profile (player/[id].tsx)
+- [x] Navigation from matches, trainings, teams, stats
+- [x] Quick actions on player profile (add stats, rate, message)
+
+## Expanded Match Statistics (Completed)
+- [x] Goals, assists, clean sheets tracking
+- [x] Minutes played per match
+- [x] Yellow/red cards
+- [x] Goalkeeper stats (saves, goals conceded)
+- [x] Add stats form after match (add-player-stats.tsx)
+
+## Separate Team Rankings (Completed)
+- [x] Rankings per team (not just club-wide)
+- [x] Academy separate from main teams
+- [x] Top scorer, assister, attendance per team
+- [x] Season stats per team (team-rankings.tsx)

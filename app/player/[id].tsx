@@ -212,6 +212,41 @@ export default function PlayerDetailScreen() {
           </View>
         </View>
 
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Akcje</ThemedText>
+          <View style={styles.actionsGrid}>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() => router.push(`/add-player-stats?playerId=${playerId}` as any)}
+            >
+              <MaterialIcons name="add-chart" size={24} color={AppColors.primary} />
+              <ThemedText style={styles.actionLabel}>Dodaj statystyki</ThemedText>
+            </Pressable>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() => router.push(`/player-rating?playerId=${playerId}` as any)}
+            >
+              <MaterialIcons name="star" size={24} color={AppColors.primary} />
+              <ThemedText style={styles.actionLabel}>Oceń zawodnika</ThemedText>
+            </Pressable>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() => router.push(`/player-trends?playerId=${playerId}` as any)}
+            >
+              <MaterialIcons name="show-chart" size={24} color={AppColors.primary} />
+              <ThemedText style={styles.actionLabel}>Trendy</ThemedText>
+            </Pressable>
+            <Pressable
+              style={styles.actionButton}
+              onPress={() => router.push(`/player-achievements?playerId=${playerId}` as any)}
+            >
+              <MaterialIcons name="emoji-events" size={24} color={AppColors.primary} />
+              <ThemedText style={styles.actionLabel}>Osiągnięcia</ThemedText>
+            </Pressable>
+          </View>
+        </View>
+
         {/* Danger Zone */}
         <View style={styles.dangerZone}>
           <Pressable
@@ -440,5 +475,22 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  actionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+  },
+  actionButton: {
+    width: "48%",
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    alignItems: "center",
+    gap: 8,
+  },
+  actionLabel: {
+    fontSize: 13,
+    color: "#94a3b8",
   },
 });
