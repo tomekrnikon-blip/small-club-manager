@@ -321,3 +321,26 @@
 - [x] Audit log for schedule changes (changeHistory table)
 - [x] Change history viewer (change-history.tsx)
 - [x] Revert functionality for recent changes
+
+
+## Survey Creation & Notifications (Completed)
+- [x] Survey creation form for coaches (create-survey.tsx)
+- [x] Survey options editor with type selection
+- [x] Date picker for date voting surveys
+- [x] Push notifications for new surveys (surveyNotificationService.ts)
+- [x] Email notifications for new surveys
+
+## Automatic Change Logging (Completed)
+- [x] Change logging service (changeLogService.ts)
+- [x] Integrate change history with training CRUD
+- [x] Integrate change history with match CRUD
+- [x] Integrate change history with player CRUD
+- [x] Integrate change history with finance CRUD
+
+## Player Dashboard (Completed)
+- [x] Personal statistics overview (goals, assists, attendance)
+- [x] Upcoming trainings and matches schedule
+- [x] Recent ratings from coach
+- [x] Performance metrics (attendance rate, average rating, cards)
+- [x] Quick actions (callups, surveys, messages, stats)
+- [x] Player dashboard screen (player-dashboard.tsx)

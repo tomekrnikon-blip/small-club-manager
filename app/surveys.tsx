@@ -199,7 +199,9 @@ export default function SurveysScreen() {
           <MaterialIcons name="arrow-back" size={24} color="#fff" />
         </Pressable>
         <ThemedText style={styles.headerTitle}>Ankiety</ThemedText>
-        <View style={{ width: 40 }} />
+        <Pressable onPress={() => router.push("/create-survey" as any)} style={styles.createBtn}>
+          <MaterialIcons name="add" size={24} color="#fff" />
+        </Pressable>
       </View>
 
       {/* Tabs */}
@@ -340,6 +342,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#1e293b",
   },
   backBtn: {
+    padding: Spacing.xs,
+  },
+  createBtn: {
     padding: Spacing.xs,
   },
   headerTitle: {

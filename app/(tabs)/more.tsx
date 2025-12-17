@@ -232,8 +232,13 @@ export default function MoreScreen() {
             label="Eksport PDF"
             onPress={() => router.push("/pdf-export" as any)}
           />
+<MenuItem
+            icon="sports-soccer"
+            label="Panel zawodnika"
+            onPress={() => router.push("/player-dashboard" as any)}
+          />
           <MenuItem
-            icon="family-restroom"
+            icon="person"
             label="Panel rodzica"
             onPress={() => router.push("/parent-panel" as any)}
           />
