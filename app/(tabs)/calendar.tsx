@@ -408,6 +408,11 @@ export default function CalendarScreen() {
               <MaterialIcons name="add" size={24} color="#fff" />
             </Pressable>
           )}
+          {permissions.canEditClub && (
+            <Pressable style={styles.importButton} onPress={() => router.push('/import-matches' as any)}>
+              <MaterialIcons name="cloud-download" size={20} color={AppColors.primary} />
+            </Pressable>
+          )}
           <Pressable style={styles.exportButton} onPress={() => router.push('/calendar-export' as any)}>
             <MaterialIcons name="file-download" size={20} color={AppColors.primary} />
           </Pressable>
@@ -1012,6 +1017,14 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: Radius.md,
     backgroundColor: AppColors.primary + "20",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  importButton: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    backgroundColor: AppColors.success + "20",
     justifyContent: "center",
     alignItems: "center",
   },

@@ -717,3 +717,11 @@
 - [x] Country selection in onboarding flow (app/onboarding/country.tsx)
 - [x] Match schedule import to calendar (matchImportService.ts)
 - [x] User country preference storage (AsyncStorage)
+
+
+## Calendar Import & Notifications (Completed)
+- [x] Import matches button in calendar
+- [x] Import matches screen (import-matches.tsx)
+- [x] Sync status screen with import history (sync-status.tsx)
+- [x] Schedule change notifications (notificationService.ts)
+- [x] Last sync timestamp display

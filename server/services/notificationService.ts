@@ -266,3 +266,75 @@ export function formatCallupMessage(
 
   return `${playerName}, zostałeś powołany na mecz ${opponent} (${isHome ? "dom" : "wyjazd"}) w dniu ${formattedDate}. Potwierdź swoją obecność w aplikacji ${clubName}.`;
 }
+
+
+/**
+ * Send notification when match schedule changes
+ */
+export async function sendScheduleChangeNotification(
+  clubId: number,
+  matchId: number,
+  changeType: "date" | "time" | "venue" | "cancelled",
+  oldValue: string,
+  newValue: string
+): Promise<NotificationResult[]> {
+  const results: NotificationResult[] = [];
+
+  const club = await getClubById(clubId);
+  const match = await getMatchById(matchId);
+
+  if (!club || !match) {
+    return [{ success: false, channel: "app", error: "Club or match not found" }];
+  }
+
+  let title = "";
+  let message = "";
+
+  switch (changeType) {
+    case "date":
+      title = "Zmiana terminu meczu";
+      message = `Mecz z ${match.opponent} został przełożony z ${oldValue} na ${newValue}.`;
+      break;
+    case "time":
+      title = "Zmiana godziny meczu";
+      message = `Godzina meczu z ${match.opponent} została zmieniona z ${oldValue} na ${newValue}.`;
+      break;
+    case "venue":
+      title = "Zmiana miejsca meczu";
+      message = `Miejsce meczu z ${match.opponent} zostało zmienione z "${oldValue}" na "${newValue}".`;
+      break;
+    case "cancelled":
+      title = "Mecz odwołany";
+      message = `Mecz z ${match.opponent} zaplanowany na ${oldValue} został odwołany.`;
+      break;
+  }
+
+  // Send app notification to all club members
+  const appResult = await sendAppNotification(clubId, undefined, title, message, "general");
+  results.push(appResult);
+
+  return results;
+}
+
+/**
+ * Send notification when new matches are imported from official source
+ */
+export async function sendMatchImportNotification(
+  clubId: number,
+  importedCount: number,
+  updatedCount: number,
+  source: string
+): Promise<NotificationResult> {
+  const club = await getClubById(clubId);
+
+  if (!club) {
+    return { success: false, channel: "app", error: "Club not found" };
+  }
+
+  const title = "Terminarz zaktualizowany";
+  const message = importedCount > 0
+    ? `Zaimportowano ${importedCount} nowych meczów z ${source}. ${updatedCount > 0 ? `Zaktualizowano ${updatedCount} istniejących.` : ""}`
+    : `Zaktualizowano ${updatedCount} meczów z ${source}.`;
+
+  return sendAppNotification(clubId, undefined, title, message, "general");
+}
