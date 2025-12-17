@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-export default function OnboardingLayout() {
+export default function SetupLayout() {
   return (
     <Stack
       screenOptions={{
@@ -8,7 +8,7 @@ export default function OnboardingLayout() {
         animation: "slide_from_right",
       }}
     >
-      <Stack.Screen name="country" />
+      <Stack.Screen name="country" options={{ title: "Wybierz kraj" }} />
     </Stack>
   );
 }
