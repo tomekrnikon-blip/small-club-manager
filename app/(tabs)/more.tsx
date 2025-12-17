@@ -293,6 +293,11 @@ export default function MoreScreen() {
             onPress={() => router.push("/share-album" as any)}
           />
           <MenuItem
+            icon="cloud-upload"
+            label="Przechowywanie w chmurze"
+            onPress={() => router.push("/cloud-storage-settings" as any)}
+          />
+          <MenuItem
             icon="person"
             label="Panel rodzica"
             onPress={() => router.push("/parent-panel" as any)}

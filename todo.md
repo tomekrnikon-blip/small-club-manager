@@ -453,3 +453,25 @@
 - [x] Export button in season summary header
 - [x] Share album link in more menu
 - [x] Improved navigation and UX polish
+
+
+## External Cloud Storage Integration (Completed)
+- [x] Cloud storage settings screen (cloud-storage-settings.tsx)
+- [x] Support for Google Drive, Dropbox, OneDrive
+- [x] User connects their own cloud account via OAuth
+- [x] Photos stored on user's cloud, not app storage
+- [x] Cloud folder selection and sync settings (wifi only, auto-sync)
+- [x] Cloud storage service (cloudStorageService.ts)
+
+## Automatic Training Reminders (Completed)
+- [x] Reminder service for upcoming events (trainingReminderService.ts)
+- [x] Send notifications 24h before training/match
+- [x] Message formatting for push, SMS, email channels
+- [x] Integration with notification system
+
+## Public Album View (Completed)
+- [x] Public page for shared album links (public-album.tsx)
+- [x] No login required for viewing
+- [x] Respect sharing settings (download, expiration)
+- [x] Mobile-optimized gallery with lightbox viewer
+- [x] Navigation arrows and photo counter
