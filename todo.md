@@ -649,3 +649,41 @@
 - [ ] Manager verification as team representative
 - [ ] Automatic data synchronization scheduler
 - [ ] Match schedule import from PZPN
+
+
+## Social Media UI (Completed)
+- [x] Social media settings screen
+- [x] Facebook connection flow
+- [x] Instagram connection flow
+- [x] Connected accounts list
+- [x] Disconnect account option
+
+## Post Templates (Completed)
+- [x] Match result template with stats
+- [x] Match preview/announcement template
+- [x] Player highlight template
+- [x] Season stats template
+- [x] Custom post template
+- [x] Template preview before posting
+- [x] Platform selection (FB/Instagram)
+- [ ] Schedule post for later (UI ready, backend pending)
+
+## PZPN Expansion (In Progress)
+- [ ] Add Mazowiecki ZPN scraping
+- [ ] Add Śląski ZPN scraping
+- [ ] Add more regional associations
+- [ ] Unified scraping interface
+
+
+## International Country Selection (Completed)
+- [x] Country selection screen with flags
+- [x] Football association data for each country
+- [x] Poland (PZPN) - already implemented
+- [x] Germany (DFB) - lower leagues data
+- [x] Czech Republic (FAČR) - league data
+- [x] Slovakia (SFZ) - league data
+- [x] Austria (ÖFB) - league data
+- [x] International league service with all countries
+- [x] League selection flow (country → region → league → team)
+- [ ] Language localization based on country
+- [ ] Store selected country in user preferences
