@@ -292,3 +292,219 @@ export function generateReportHTML(report: ReportData): string {
 
   return html;
 }
+
+
+/**
+ * Generate detailed frequency report data with team and period filters
+ */
+export async function generateFrequencyReport(
+  clubId: number,
+  options: {
+    teamId?: number;
+    startDate?: Date;
+    endDate?: Date;
+    includeMatches?: boolean;
+    includeTrainings?: boolean;
+  } = {}
+): Promise<ReportData> {
+  const club = await db.getClubById(clubId);
+  const players = await db.getPlayersByClubId(clubId);
+  const trainings = await db.getTrainingsByClubId(clubId);
+  const matches = await db.getMatchesByClubId(clubId);
+
+  const {
+    teamId,
+    startDate = new Date(new Date().getFullYear(), 0, 1),
+    endDate = new Date(),
+    includeMatches = true,
+    includeTrainings = true,
+  } = options;
+
+  // Filter players by team if specified
+  const filteredPlayers = teamId
+    ? players.filter((p: any) => p.teamId === teamId)
+    : players;
+
+  // Filter events by date
+  const filteredTrainings = trainings.filter((t: any) => {
+    const date = new Date(t.trainingDate);
+    return date >= startDate && date <= endDate;
+  });
+
+  const filteredMatches = matches.filter((m: any) => {
+    const date = new Date(m.matchDate);
+    return date >= startDate && date <= endDate;
+  });
+
+  // Calculate attendance per player
+  const frequencyData: {
+    playerId: number;
+    name: string;
+    team: string;
+    trainingPresent: number;
+    trainingTotal: number;
+    trainingPercent: number;
+    matchPresent: number;
+    matchTotal: number;
+    matchPercent: number;
+    overallPercent: number;
+  }[] = [];
+
+  for (const player of filteredPlayers) {
+    let trainingPresent = 0;
+    let matchPresent = 0;
+
+    // Get training attendance
+    if (includeTrainings) {
+      for (const training of filteredTrainings) {
+        const attendance = await db.getTrainingAttendance(training.id);
+        const playerAtt = attendance.find((a: any) => a.playerId === player.id);
+        if (playerAtt?.attended === 1) {
+          trainingPresent++;
+        }
+      }
+    }
+
+    // Get match attendance (from callups)
+    if (includeMatches) {
+      for (const match of filteredMatches) {
+        const callups = await db.getMatchCallups(match.id);
+        const playerCallup = callups.find((c: any) => c.playerId === player.id);
+        if (playerCallup?.status === 'confirmed') {
+          matchPresent++;
+        }
+      }
+    }
+
+    const trainingTotal = includeTrainings ? filteredTrainings.length : 0;
+    const matchTotal = includeMatches ? filteredMatches.length : 0;
+    const trainingPercent = trainingTotal > 0 ? (trainingPresent / trainingTotal) * 100 : 0;
+    const matchPercent = matchTotal > 0 ? (matchPresent / matchTotal) * 100 : 0;
+    const totalEvents = trainingTotal + matchTotal;
+    const totalPresent = trainingPresent + matchPresent;
+    const overallPercent = totalEvents > 0 ? (totalPresent / totalEvents) * 100 : 0;
+
+    frequencyData.push({
+      playerId: player.id,
+      name: player.name,
+      team: 'Brak drużyny',
+      trainingPresent,
+      trainingTotal,
+      trainingPercent,
+      matchPresent,
+      matchTotal,
+      matchPercent,
+      overallPercent,
+    });
+  }
+
+  // Sort by overall percentage descending
+  frequencyData.sort((a, b) => b.overallPercent - a.overallPercent);
+
+  // Calculate team averages
+  const teamAverages: Record<string, { total: number; count: number }> = {};
+  frequencyData.forEach(p => {
+    if (!teamAverages[p.team]) {
+      teamAverages[p.team] = { total: 0, count: 0 };
+    }
+    teamAverages[p.team].total += p.overallPercent;
+    teamAverages[p.team].count++;
+  });
+
+  const teamStats = Object.entries(teamAverages).map(([team, data]) => ({
+    team,
+    average: data.count > 0 ? (data.total / data.count).toFixed(1) : '0.0',
+    playerCount: data.count,
+  }));
+
+  return {
+    title: 'Raport Frekwencji',
+    subtitle: `${startDate.toLocaleDateString('pl-PL')} - ${endDate.toLocaleDateString('pl-PL')}`,
+    generatedAt: new Date(),
+    clubName: club?.name || 'Klub',
+    sections: [
+      {
+        title: 'Podsumowanie',
+        type: 'summary',
+        data: {
+          'Liczba zawodników': filteredPlayers.length,
+          'Treningów w okresie': filteredTrainings.length,
+          'Meczów w okresie': filteredMatches.length,
+          'Średnia frekwencja': frequencyData.length > 0
+            ? (frequencyData.reduce((sum, p) => sum + p.overallPercent, 0) / frequencyData.length).toFixed(1) + '%'
+            : '0%',
+          'Najlepsza frekwencja': frequencyData[0]?.name || '-',
+        },
+      },
+      {
+        title: 'Frekwencja według drużyn',
+        type: 'table',
+        data: {
+          headers: ['Drużyna', 'Zawodników', 'Średnia frekwencja'],
+          rows: teamStats.map(t => [
+            t.team,
+            t.playerCount.toString(),
+            t.average + '%',
+          ]),
+        },
+      },
+      {
+        title: 'Frekwencja indywidualna',
+        type: 'table',
+        data: {
+          headers: ['Zawodnik', 'Drużyna', 'Treningi', 'Mecze', 'Ogółem'],
+          rows: frequencyData.map(p => [
+            p.name,
+            p.team,
+            `${p.trainingPresent}/${p.trainingTotal} (${p.trainingPercent.toFixed(1)}%)`,
+            `${p.matchPresent}/${p.matchTotal} (${p.matchPercent.toFixed(1)}%)`,
+            p.overallPercent.toFixed(1) + '%',
+          ]),
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Generate CSV from frequency data
+ */
+export function generateFrequencyCSV(frequencyData: any[]): string {
+  const headers = ['Zawodnik', 'Drużyna', 'Treningi obecne', 'Treningi razem', 'Treningi %', 'Mecze obecne', 'Mecze razem', 'Mecze %', 'Ogółem %'];
+  const rows = frequencyData.map(p => [
+    p.name,
+    p.team,
+    p.trainingPresent,
+    p.trainingTotal,
+    p.trainingPercent.toFixed(1),
+    p.matchPresent,
+    p.matchTotal,
+    p.matchPercent.toFixed(1),
+    p.overallPercent.toFixed(1),
+  ]);
+
+  return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+}
+
+/**
+ * Generate Excel-compatible data from frequency report
+ */
+export function generateFrequencyExcelData(frequencyData: any[]): {
+  headers: string[];
+  rows: (string | number)[][];
+} {
+  return {
+    headers: ['Zawodnik', 'Drużyna', 'Treningi obecne', 'Treningi razem', 'Treningi %', 'Mecze obecne', 'Mecze razem', 'Mecze %', 'Ogółem %'],
+    rows: frequencyData.map(p => [
+      p.name,
+      p.team,
+      p.trainingPresent,
+      p.trainingTotal,
+      p.trainingPercent,
+      p.matchPresent,
+      p.matchTotal,
+      p.matchPercent,
+      p.overallPercent,
+    ]),
+  };
+}

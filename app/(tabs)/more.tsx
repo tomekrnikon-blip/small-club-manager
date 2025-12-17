@@ -218,6 +218,21 @@ export default function MoreScreen() {
             onPress={() => router.push("/messaging-limits" as any)}
           />
           <MenuItem
+            icon="sports"
+            label="Dashboard Trenera"
+            onPress={() => router.push("/coach-dashboard" as any)}
+          />
+          <MenuItem
+            icon="family-restroom"
+            label="Powiadomienia dla rodziców"
+            onPress={() => router.push("/parent-notifications" as any)}
+          />
+          <MenuItem
+            icon="picture-as-pdf"
+            label="Eksport PDF"
+            onPress={() => router.push("/pdf-export" as any)}
+          />
+          <MenuItem
             icon="schedule"
             label="Automatyczne przypomnienia"
             onPress={() => router.push("/auto-reminders" as any)}

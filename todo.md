@@ -256,3 +256,9 @@
 - [x] SMS statistics screen with history and charts (sms-stats.tsx)
 - [x] Unified messaging settings screen (messaging-settings.tsx)
 - [x] Monthly cost limits with alerts for SMS/WhatsApp (messaging-limits.tsx)
+
+
+## Coach & Parent Features (Completed)
+- [x] Coach dashboard with team attendance and stats (coach-dashboard.tsx)
+- [x] Automatic parent notifications for child absences (parentNotificationService.ts, parent-notifications.tsx)
+- [x] PDF export for frequency and statistics reports (pdf-export.tsx, pdfService.ts)
