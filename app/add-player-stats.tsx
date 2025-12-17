@@ -49,21 +49,16 @@ export default function AddPlayerStatsScreen() {
 
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(matchIdNum || null);
 
-  // Mock mutation for now - stats will be saved locally
-  const [isSaving, setIsSaving] = useState(false);
-  const addStatsMutation = {
-    isPending: isSaving,
-    mutate: (data: any) => {
-      setIsSaving(true);
-      // Simulate API call
-      setTimeout(() => {
-        setIsSaving(false);
-        Alert.alert("Sukces", "Statystyki zostały zapisane", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
-      }, 500);
+  const addStatsMutation = trpc.players.addMatchStats.useMutation({
+    onSuccess: () => {
+      Alert.alert("Sukces", "Statystyki zostały zapisane", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
     },
-  };
+    onError: (error: any) => {
+      Alert.alert("Błąd", error.message || "Wystąpił błąd");
+    },
+  });
 
   const handleSave = () => {
     if (!selectedMatchId) {

@@ -547,3 +547,22 @@
 - [x] Academy separate from main teams
 - [x] Top scorer, assister, attendance per team
 - [x] Season stats per team (team-rankings.tsx)
+
+
+## Automatic Stats Updates (Completed)
+- [x] Integrate match stats form with database (db.ts)
+- [x] Auto-calculate player season stats after match (updatePlayerSeasonStats)
+- [x] Update rankings automatically after stats entry
+- [x] Match stats API endpoint (players.addMatchStats)
+
+## Ranking Notifications (Completed)
+- [x] Ranking milestone detection service (rankingNotificationService.ts)
+- [x] Notifications when player moves up in ranking
+- [x] Notifications for top 3 achievements
+- [x] Weekly ranking summary notifications
+
+## Rankings PDF Export (Completed)
+- [x] PDF/HTML/CSV export for team rankings (rankings-export.tsx)
+- [x] Include podium and full ranking list
+- [x] Category filter in export (goals, assists, attendance, rating, minutes)
+- [x] Team filter and preview before export

@@ -317,10 +317,15 @@ export default function MoreScreen() {
             label="Oceny zawodników"
             onPress={() => router.push("/player-ratings" as any)}
           />
-          <MenuItem
+<MenuItem
             icon="leaderboard"
-            label="Statystyki drużyny"
-            onPress={() => router.push("/team-statistics" as any)}
+            label="Rankingi drużyn"
+            onPress={() => router.push("/team-rankings" as any)}
+          />
+          <MenuItem
+            icon="file-download"
+            label="Eksport rankingów"
+            onPress={() => router.push("/rankings-export" as any)}
           />
           <MenuItem
             icon="chat"

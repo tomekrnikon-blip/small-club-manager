@@ -1477,3 +1477,87 @@ export async function markChangeReverted(id: number, revertedBy: number) {
     .set({ revertedAt: new Date(), revertedBy })
     .where(eq(changeHistory.id, id));
 }
+
+
+// Player Match Stats functions
+export async function createPlayerMatchStats(data: {
+  playerId: number;
+  matchId: number;
+  goals: number;
+  assists: number;
+  minutesPlayed: number;
+  yellowCards: number;
+  redCards: number;
+  cleanSheet: boolean;
+  saves: number;
+  goalsConceded: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Store individual match stats in matchStats table
+  const result = await db.insert(matchStats).values({
+    matchId: data.matchId,
+    playerId: data.playerId,
+    goals: data.goals,
+    assists: data.assists,
+    minutesPlayed: data.minutesPlayed,
+    yellowCards: data.yellowCards,
+    redCards: data.redCards,
+  });
+  return result[0]?.insertId;
+}
+
+export async function updatePlayerSeasonStats(playerId: number, stats: {
+  goals: number;
+  assists: number;
+  minutesPlayed: number;
+  yellowCards: number;
+  redCards: number;
+  cleanSheets: number;
+  saves: number;
+  goalsConceded: number;
+}) {
+  const db = await getDb();
+  if (!db) return;
+  const season = new Date().getFullYear().toString();
+  
+  // Get existing season stats
+  const existing = await db.select()
+    .from(playerStats)
+    .where(and(
+      eq(playerStats.playerId, playerId),
+      eq(playerStats.season, season)
+    ))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    // Update existing season totals
+    await db.update(playerStats)
+      .set({
+        goals: sql`${playerStats.goals} + ${stats.goals}`,
+        assists: sql`${playerStats.assists} + ${stats.assists}`,
+        minutesPlayed: sql`${playerStats.minutesPlayed} + ${stats.minutesPlayed}`,
+        yellowCards: sql`${playerStats.yellowCards} + ${stats.yellowCards}`,
+        redCards: sql`${playerStats.redCards} + ${stats.redCards}`,
+        cleanSheets: stats.cleanSheets,
+        saves: sql`${playerStats.saves} + ${stats.saves}`,
+        goalsConceded: sql`${playerStats.goalsConceded} + ${stats.goalsConceded}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(playerStats.id, existing[0].id));
+  } else {
+    // Create new season totals record
+    await db.insert(playerStats).values({
+      playerId,
+      season,
+      goals: stats.goals,
+      assists: stats.assists,
+      minutesPlayed: stats.minutesPlayed,
+      yellowCards: stats.yellowCards,
+      redCards: stats.redCards,
+      cleanSheets: stats.cleanSheets,
+      saves: stats.saves,
+      goalsConceded: stats.goalsConceded,
+    });
+  }
+}

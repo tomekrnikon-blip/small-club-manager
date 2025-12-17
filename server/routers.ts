@@ -384,6 +384,44 @@ export const appRouter = router({
         if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
         return db.getPlayerStats(input.playerId, input.season);
       }),
+    
+    addMatchStats: protectedProcedure
+      .input(z.object({
+        playerId: z.number(),
+        matchId: z.number(),
+        goals: z.number().min(0).default(0),
+        assists: z.number().min(0).default(0),
+        minutesPlayed: z.number().min(0).max(120).default(0),
+        yellowCards: z.number().min(0).max(2).default(0),
+        redCards: z.number().min(0).max(1).default(0),
+        cleanSheet: z.boolean().default(false),
+        saves: z.number().min(0).default(0),
+        goalsConceded: z.number().min(0).default(0),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const player = await db.getPlayerById(input.playerId);
+        if (!player) throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono zawodnika" });
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, player.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        if (!permissions.canEditMatches) throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień do edycji meczów" });
+        
+        // Save match stats
+        const statsId = await db.createPlayerMatchStats(input);
+        
+        // Update player season totals
+        await db.updatePlayerSeasonStats(input.playerId, {
+          goals: input.goals,
+          assists: input.assists,
+          minutesPlayed: input.minutesPlayed,
+          yellowCards: input.yellowCards,
+          redCards: input.redCards,
+          cleanSheets: input.cleanSheet ? 1 : 0,
+          saves: input.saves,
+          goalsConceded: input.goalsConceded,
+        });
+        
+        return { id: statsId, success: true };
+      }),
   }),
 
   // ============================================
