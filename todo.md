@@ -744,3 +744,9 @@
 - [x] Cache league tables locally
 - [x] Pre-cache essential data function
 - [x] Cache statistics and management
+
+
+## Logout Option (Completed)
+- [x] Add logout button to tab bar menu (all 5 tabs)
+- [x] Add logout option in settings/more menu
+- [x] Logout confirmation dialog (in more.tsx)

@@ -15,7 +15,7 @@ import { OfflineIndicator } from "@/components/offline-indicator";
 type FilterType = "all" | "upcoming" | "past";
 
 export default function MatchesScreen() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<FilterType>("all");
@@ -75,12 +75,17 @@ export default function MatchesScreen() {
           <ThemedText style={styles.title}>Mecze</ThemedText>
           <OfflineIndicator isFromCache={isFromCache} isStale={isStale} isOffline={isOffline} compact />
         </View>
-        <Pressable
-          style={styles.addButton}
-          onPress={() => router.push("/match/add" as any)}
-        >
-          <MaterialIcons name="add" size={24} color="#fff" />
-        </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable
+            style={styles.addButton}
+            onPress={() => router.push("/match/add" as any)}
+          >
+            <MaterialIcons name="add" size={24} color="#fff" />
+          </Pressable>
+          <Pressable style={styles.logoutButton} onPress={logout}>
+            <MaterialIcons name="logout" size={22} color={AppColors.danger} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Stats Summary */}
@@ -268,6 +273,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
   },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
   addButton: {
     backgroundColor: AppColors.primary,
     width: 44,
@@ -275,6 +285,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     justifyContent: "center",
     alignItems: "center",
+  },
+  logoutButton: {
+    padding: Spacing.sm,
   },
   statsContainer: {
     backgroundColor: AppColors.bgCard,

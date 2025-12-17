@@ -27,7 +27,7 @@ const positionLabels: Record<string, string> = {
 };
 
 export default function PlayersScreen() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,12 +79,17 @@ export default function PlayersScreen() {
           <ThemedText style={styles.title}>Kadra</ThemedText>
           <OfflineIndicator isFromCache={isFromCache} isStale={isStale} isOffline={isOffline} compact />
         </View>
-        <Pressable
-          style={styles.addButton}
-          onPress={() => router.push("/player/add" as any)}
-        >
-          <MaterialIcons name="person-add" size={24} color="#fff" />
-        </Pressable>
+        <View style={styles.headerRight}>
+          <Pressable
+            style={styles.addButton}
+            onPress={() => router.push("/player/add" as any)}
+          >
+            <MaterialIcons name="person-add" size={24} color="#fff" />
+          </Pressable>
+          <Pressable style={styles.logoutButton} onPress={logout}>
+            <MaterialIcons name="logout" size={22} color={AppColors.danger} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Search */}
@@ -266,6 +271,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
   },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+  },
   addButton: {
     backgroundColor: AppColors.primary,
     width: 44,
@@ -273,6 +283,9 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
     justifyContent: "center",
     alignItems: "center",
+  },
+  logoutButton: {
+    padding: Spacing.sm,
   },
   searchContainer: {
     flexDirection: "row",

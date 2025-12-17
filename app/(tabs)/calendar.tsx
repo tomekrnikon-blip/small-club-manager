@@ -47,7 +47,7 @@ interface Team {
 }
 
 export default function CalendarScreen() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const utils = trpc.useUtils();
@@ -418,6 +418,9 @@ export default function CalendarScreen() {
           </Pressable>
           <Pressable style={styles.todayButton} onPress={goToToday}>
             <ThemedText style={styles.todayButtonText}>Dziś</ThemedText>
+          </Pressable>
+          <Pressable style={styles.logoutButton} onPress={logout}>
+            <MaterialIcons name="logout" size={22} color={AppColors.danger} />
           </Pressable>
         </View>
       </View>
@@ -1038,6 +1041,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 14,
+  },
+  logoutButton: {
+    padding: Spacing.sm,
   },
   monthNav: {
     flexDirection: "row",

@@ -190,9 +190,14 @@ export default function HomeScreen() {
               <ThemedText style={styles.clubLocation}>{club.city || club.location || "Polska"}</ThemedText>
             </View>
           </View>
-          <Pressable onPress={() => router.push("/notifications" as any)} style={styles.notificationButton}>
-            <MaterialIcons name="notifications" size={24} color="#94a3b8" />
-          </Pressable>
+          <View style={styles.headerRight}>
+            <Pressable onPress={() => router.push("/notifications" as any)} style={styles.headerButton}>
+              <MaterialIcons name="notifications" size={24} color="#94a3b8" />
+            </Pressable>
+            <Pressable onPress={logout} style={styles.headerButton}>
+              <MaterialIcons name="logout" size={22} color={AppColors.danger} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Quick Stats */}
@@ -469,6 +474,14 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
   },
   notificationButton: {
+    padding: Spacing.sm,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  headerButton: {
     padding: Spacing.sm,
   },
   // Stats
