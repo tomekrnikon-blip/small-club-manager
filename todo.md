@@ -766,3 +766,13 @@
 - [x] Delete account confirmation UI with warnings
 - [x] Account info query (account.getAccountInfo)
 - [x] Delete account screen with detailed warnings
+
+
+## Data Export & Account Recovery (Completed)
+- [x] Data export service for backup before deletion (dataExportService.ts)
+- [x] Export club data to JSON/CSV
+- [x] 30-day grace period for account deletion (scheduleAccountDeletion)
+- [x] Account recovery during grace period (cancelAccountDeletion)
+- [x] Club ownership transfer to another manager (transferClubOwnership)
+- [x] Transfer confirmation flow (transfer-club.tsx)
+- [x] Get transfer candidates endpoint

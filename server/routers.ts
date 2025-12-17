@@ -2566,6 +2566,7 @@ export const appRouter = router({
 
     getAccountInfo: protectedProcedure.query(async ({ ctx }) => {
       const userId = ctx.user.id;
+      const user = await db.getUserById(userId);
       const ownedClubs = await db.getClubsByUserId(userId);
       const memberships = await db.getUserClubMemberships(userId);
       
@@ -2574,8 +2575,159 @@ export const appRouter = router({
         ownedClubsCount: ownedClubs?.length || 0,
         membershipsCount: memberships?.length || 0,
         ownedClubs: ownedClubs?.map(c => ({ id: c.id, name: c.name })) || [],
+        deletionScheduledAt: user?.deletionScheduledAt || null,
+        deletionReason: user?.deletionReason || null,
       };
     }),
+
+    // Schedule account deletion with 30-day grace period
+    scheduleAccountDeletion: protectedProcedure
+      .input(z.object({
+        confirmText: z.string(),
+        reason: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.confirmText !== "USUŃ KONTO") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nieprawidłowe potwierdzenie" });
+        }
+
+        const userId = ctx.user.id;
+        const deletionDate = new Date();
+        deletionDate.setDate(deletionDate.getDate() + 30); // 30 days from now
+        
+        await db.scheduleAccountDeletion(userId, deletionDate, input.reason);
+        
+        return { 
+          success: true, 
+          deletionScheduledAt: deletionDate.toISOString(),
+          message: "Konto zostanie usunięte za 30 dni. Możesz anulować tę operację w dowolnym momencie."
+        };
+      }),
+
+    // Cancel scheduled account deletion
+    cancelAccountDeletion: protectedProcedure.mutation(async ({ ctx }) => {
+      const userId = ctx.user.id;
+      await db.cancelAccountDeletion(userId);
+      return { success: true, message: "Usuwanie konta zostało anulowane." };
+    }),
+
+    // Export all user data
+    exportData: protectedProcedure.mutation(async ({ ctx }) => {
+      const userId = ctx.user.id;
+      const ownedClubs = await db.getClubsByUserId(userId);
+      
+      if (!ownedClubs || ownedClubs.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono klubów do eksportu" });
+      }
+      
+      const { exportClubData, convertToCSV } = await import("./services/dataExportService");
+      
+      const allData = [];
+      for (const club of ownedClubs) {
+        const data = await exportClubData(club.id);
+        allData.push(data);
+      }
+      
+      return {
+        success: true,
+        data: allData,
+        csv: allData.map(d => convertToCSV(d)).join("\n\n===== NOWY KLUB =====\n\n"),
+      };
+    }),
+
+    // Transfer club ownership to another user
+    transferClubOwnership: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        newOwnerEmail: z.string().email(),
+        confirmText: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.confirmText !== "PRZEKAZ KLUB") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nieprawidłowe potwierdzenie" });
+        }
+
+        const userId = ctx.user.id;
+        
+        // Verify user owns this club
+        const club = await db.getClubById(input.clubId);
+        if (!club || club.userId !== userId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nie masz uprawnień do tego klubu" });
+        }
+        
+        // Find new owner by email
+        const allUsers = await db.getAllUsers();
+        const newOwner = allUsers.find(u => u.email === input.newOwnerEmail);
+        
+        if (!newOwner) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Użytkownik o podanym adresie email nie istnieje" });
+        }
+        
+        if (newOwner.id === userId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nie możesz przekazać klubu samemu sobie" });
+        }
+        
+        // Transfer ownership
+        await db.updateClub(input.clubId, { userId: newOwner.id });
+        
+        // Update club membership - make old owner a regular member, new owner a manager
+        const existingMembership = await db.getClubMember(input.clubId, newOwner.id);
+        if (existingMembership) {
+          await db.updateClubMember(existingMembership.id, { role: "manager" });
+        } else {
+          await db.addClubMember({
+            clubId: input.clubId,
+            userId: newOwner.id,
+            role: "manager",
+            acceptedAt: new Date(),
+          });
+        }
+        
+        // Downgrade old owner to board member
+        const oldOwnerMembership = await db.getClubMember(input.clubId, userId);
+        if (oldOwnerMembership) {
+          await db.updateClubMember(oldOwnerMembership.id, { role: "board_member" });
+        }
+        
+        return { 
+          success: true, 
+          message: `Klub "${club.name}" został przekazany do ${newOwner.name || newOwner.email}`,
+          newOwnerName: newOwner.name || newOwner.email,
+        };
+      }),
+
+    // Get potential transfer recipients (users who are members of the club)
+    getTransferCandidates: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const userId = ctx.user.id;
+        
+        // Verify user owns this club
+        const club = await db.getClubById(input.clubId);
+        if (!club || club.userId !== userId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nie masz uprawnień do tego klubu" });
+        }
+        
+        // Get all club members except current owner
+        const members = await db.getClubMembers(input.clubId);
+        const candidates = [];
+        
+        for (const member of members) {
+          if (member.userId !== userId && member.isActive) {
+            const user = await db.getUserById(member.userId);
+            if (user) {
+              candidates.push({
+                userId: user.id,
+                name: user.name,
+                email: user.email,
+                role: member.role,
+              });
+            }
+          }
+        }
+        
+        return candidates;
+      }),
   }),
 });
 

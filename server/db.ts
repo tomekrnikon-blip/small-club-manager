@@ -1796,3 +1796,47 @@ export async function deleteUser(userId: number) {
   // Finally delete the user
   await db.delete(users).where(eq(users.id, userId));
 }
+
+
+// ============================================
+// ACCOUNT DELETION GRACE PERIOD FUNCTIONS
+// ============================================
+
+// Schedule account deletion with grace period
+export async function scheduleAccountDeletion(userId: number, deletionDate: Date, reason?: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users)
+    .set({
+      deletionScheduledAt: deletionDate,
+      deletionReason: reason || null,
+    })
+    .where(eq(users.id, userId));
+}
+
+// Cancel scheduled account deletion
+export async function cancelAccountDeletion(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users)
+    .set({
+      deletionScheduledAt: null,
+      deletionReason: null,
+    })
+    .where(eq(users.id, userId));
+}
+
+// Get users scheduled for deletion (for cron job)
+export async function getUsersScheduledForDeletion() {
+  const db = await getDb();
+  if (!db) return [];
+  const now = new Date();
+  return db.select()
+    .from(users)
+    .where(
+      and(
+        lte(users.deletionScheduledAt, now),
+        sql`${users.deletionScheduledAt} IS NOT NULL`
+      )
+    );
+}
