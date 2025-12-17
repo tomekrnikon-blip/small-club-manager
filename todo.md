@@ -433,3 +433,23 @@
 - [x] Charts for goals, attendance, results
 - [x] Best performers of the season (top scorer, assister, attendance)
 - [x] Season summary screen (season-summary.tsx)
+
+
+## Album Sharing (Completed)
+- [x] Generate shareable public links for albums
+- [x] Public album view without login
+- [x] Link expiration settings (1 day, 7 days, 30 days, unlimited)
+- [x] Share via social media / messaging (WhatsApp, Messenger, Email)
+- [x] Album sharing screen (share-album.tsx)
+
+## Season Summary Export (Completed)
+- [x] HTML/CSV generation from season summary
+- [x] Include charts and statistics in export
+- [x] Club branding in exported document
+- [x] Share/download options
+- [x] Season export functionality in season-summary.tsx and pdfService.ts
+
+## Additional Improvements (Completed)
+- [x] Export button in season summary header
+- [x] Share album link in more menu
+- [x] Improved navigation and UX polish

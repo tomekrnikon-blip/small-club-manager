@@ -772,3 +772,408 @@ export function generateCsvReport(report: ReportData): string {
 
   return csv;
 }
+
+
+/**
+ * Season summary data structure
+ */
+export interface SeasonSummaryData {
+  clubName: string;
+  season: string;
+  matches: {
+    played: number;
+    won: number;
+    drawn: number;
+    lost: number;
+  };
+  goals: {
+    scored: number;
+    conceded: number;
+  };
+  attendance: {
+    average: number;
+    total: number;
+  };
+  trainings: number;
+  topScorer: { name: string; goals: number };
+  topAssister: { name: string; assists: number };
+  bestAttendance: { name: string; percent: number };
+  previousSeason?: {
+    matches: { won: number };
+    goals: { scored: number };
+    attendance: { average: number };
+    trainings: number;
+  };
+}
+
+/**
+ * Generate HTML report for season summary
+ */
+export function generateSeasonSummaryHtml(data: SeasonSummaryData): string {
+  const winRate = data.matches.played > 0 
+    ? Math.round((data.matches.won / data.matches.played) * 100) 
+    : 0;
+  
+  const goalDiff = data.goals.scored - data.goals.conceded;
+  const goalDiffStr = goalDiff > 0 ? `+${goalDiff}` : goalDiff.toString();
+
+  let comparisonHtml = '';
+  if (data.previousSeason) {
+    const prev = data.previousSeason;
+    const wonChange = data.matches.won - prev.matches.won;
+    const goalsChange = data.goals.scored - prev.goals.scored;
+    const attendanceChange = data.attendance.average - prev.attendance.average;
+    const trainingsChange = data.trainings - prev.trainings;
+
+    const formatChange = (val: number, suffix = '') => {
+      const color = val >= 0 ? '#22c55e' : '#ef4444';
+      const arrow = val >= 0 ? '↑' : '↓';
+      return `<span style="color: ${color}">${arrow} ${Math.abs(val)}${suffix}</span>`;
+    };
+
+    comparisonHtml = `
+      <div class="section">
+        <h2>Porównanie z poprzednim sezonem</h2>
+        <table class="comparison-table">
+          <tr>
+            <td>Wygrane mecze</td>
+            <td><strong>${data.matches.won}</strong></td>
+            <td>${formatChange(wonChange)}</td>
+          </tr>
+          <tr>
+            <td>Bramki strzelone</td>
+            <td><strong>${data.goals.scored}</strong></td>
+            <td>${formatChange(goalsChange)}</td>
+          </tr>
+          <tr>
+            <td>Średnia frekwencja</td>
+            <td><strong>${data.attendance.average}%</strong></td>
+            <td>${formatChange(attendanceChange, '%')}</td>
+          </tr>
+          <tr>
+            <td>Sesje treningowe</td>
+            <td><strong>${data.trainings}</strong></td>
+            <td>${formatChange(trainingsChange)}</td>
+          </tr>
+        </table>
+      </div>
+    `;
+  }
+
+  return `
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Podsumowanie sezonu ${data.season} - ${data.clubName}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #1e293b;
+    }
+    .header h1 {
+      font-size: 28px;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .header .subtitle {
+      font-size: 16px;
+      color: #64748b;
+    }
+    .header .season {
+      display: inline-block;
+      background: #22c55e;
+      color: #fff;
+      padding: 4px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+    .section {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .section h2 {
+      font-size: 14px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+    .win-rate {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .win-rate-circle {
+      width: 120px;
+      height: 120px;
+      border-radius: 60px;
+      background: #0f172a;
+      border: 4px solid #22c55e;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .win-rate-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .win-rate-label {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      text-align: center;
+    }
+    .stat-item .value {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .stat-item .label {
+      font-size: 11px;
+      color: #64748b;
+    }
+    .stat-item.won .value { color: #22c55e; }
+    .stat-item.drawn .value { color: #f59e0b; }
+    .stat-item.lost .value { color: #ef4444; }
+    .progress-bar {
+      height: 8px;
+      background: #0f172a;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      margin-top: 16px;
+    }
+    .progress-bar .won { background: #22c55e; }
+    .progress-bar .drawn { background: #f59e0b; }
+    .progress-bar .lost { background: #ef4444; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .goals-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .goals-display .scored { color: #22c55e; font-size: 28px; font-weight: 700; }
+    .goals-display .conceded { color: #ef4444; font-size: 28px; font-weight: 700; }
+    .goals-display .separator { color: #64748b; font-size: 24px; }
+    .goal-diff {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+    .performers-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .performer-card {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .performer-card .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+    .performer-card .title {
+      font-size: 10px;
+      color: #64748b;
+      text-transform: uppercase;
+    }
+    .performer-card .name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      margin: 4px 0;
+    }
+    .performer-card .stat {
+      font-size: 11px;
+      color: #22c55e;
+      font-weight: 600;
+    }
+    .comparison-table {
+      width: 100%;
+    }
+    .comparison-table td {
+      padding: 12px 0;
+      border-bottom: 1px solid #334155;
+    }
+    .comparison-table td:first-child {
+      color: #94a3b8;
+    }
+    .comparison-table td:nth-child(2) {
+      text-align: right;
+      color: #fff;
+    }
+    .comparison-table td:nth-child(3) {
+      text-align: right;
+      width: 80px;
+    }
+    .footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${data.clubName}</h1>
+    <div class="subtitle">Podsumowanie sezonu</div>
+    <div class="season">${data.season}</div>
+  </div>
+
+  <div class="section">
+    <h2>Wyniki meczów</h2>
+    <div class="win-rate">
+      <div class="win-rate-circle">
+        <div class="win-rate-value">${winRate}%</div>
+        <div class="win-rate-label">skuteczność</div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="value">${data.matches.played}</div>
+        <div class="label">Mecze</div>
+      </div>
+      <div class="stat-item won">
+        <div class="value">${data.matches.won}</div>
+        <div class="label">Wygrane</div>
+      </div>
+      <div class="stat-item drawn">
+        <div class="value">${data.matches.drawn}</div>
+        <div class="label">Remisy</div>
+      </div>
+      <div class="stat-item lost">
+        <div class="value">${data.matches.lost}</div>
+        <div class="label">Przegrane</div>
+      </div>
+    </div>
+    <div class="progress-bar">
+      <div class="won" style="flex: ${data.matches.won}"></div>
+      <div class="drawn" style="flex: ${data.matches.drawn}"></div>
+      <div class="lost" style="flex: ${data.matches.lost}"></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="section">
+      <h2>Bramki</h2>
+      <div class="goals-display">
+        <span class="scored">${data.goals.scored}</span>
+        <span class="separator">:</span>
+        <span class="conceded">${data.goals.conceded}</span>
+      </div>
+      <div class="goal-diff">Bilans: ${goalDiffStr}</div>
+    </div>
+    <div class="section">
+      <h2>Treningi</h2>
+      <div style="text-align: center">
+        <div style="font-size: 32px; font-weight: 700; color: #fff">${data.trainings}</div>
+        <div style="font-size: 11px; color: #64748b">sesji treningowych</div>
+        <div style="margin-top: 8px; font-size: 12px; color: #94a3b8">
+          Śr. frekwencja: ${data.attendance.average}%
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Najlepsi zawodnicy</h2>
+    <div class="performers-grid">
+      <div class="performer-card">
+        <div class="icon" style="background: #22c55e20">⚽</div>
+        <div class="title">Król strzelców</div>
+        <div class="name">${data.topScorer.name}</div>
+        <div class="stat">${data.topScorer.goals} bramek</div>
+      </div>
+      <div class="performer-card">
+        <div class="icon" style="background: #3b82f620">🎯</div>
+        <div class="title">Asystent</div>
+        <div class="name">${data.topAssister.name}</div>
+        <div class="stat">${data.topAssister.assists} asyst</div>
+      </div>
+      <div class="performer-card">
+        <div class="icon" style="background: #f59e0b20">🏆</div>
+        <div class="title">Frekwencja</div>
+        <div class="name">${data.bestAttendance.name}</div>
+        <div class="stat">${data.bestAttendance.percent}%</div>
+      </div>
+    </div>
+  </div>
+
+  ${comparisonHtml}
+
+  <div class="footer">
+    Wygenerowano: ${new Date().toLocaleString('pl-PL')} | Small Club Manager
+  </div>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Generate CSV for season summary
+ */
+export function generateSeasonSummaryCsv(data: SeasonSummaryData): string {
+  let csv = '';
+  
+  csv += `"Podsumowanie sezonu ${data.season}"\n`;
+  csv += `"Klub","${data.clubName}"\n\n`;
+  
+  csv += `"WYNIKI MECZÓW"\n`;
+  csv += `"Rozegrane","${data.matches.played}"\n`;
+  csv += `"Wygrane","${data.matches.won}"\n`;
+  csv += `"Remisy","${data.matches.drawn}"\n`;
+  csv += `"Przegrane","${data.matches.lost}"\n`;
+  csv += `"Skuteczność","${Math.round((data.matches.won / data.matches.played) * 100)}%"\n\n`;
+  
+  csv += `"BRAMKI"\n`;
+  csv += `"Strzelone","${data.goals.scored}"\n`;
+  csv += `"Stracone","${data.goals.conceded}"\n`;
+  csv += `"Bilans","${data.goals.scored - data.goals.conceded}"\n\n`;
+  
+  csv += `"TRENINGI"\n`;
+  csv += `"Liczba sesji","${data.trainings}"\n`;
+  csv += `"Średnia frekwencja","${data.attendance.average}%"\n\n`;
+  
+  csv += `"NAJLEPSI ZAWODNICY"\n`;
+  csv += `"Król strzelców","${data.topScorer.name}","${data.topScorer.goals} bramek"\n`;
+  csv += `"Asystent","${data.topAssister.name}","${data.topAssister.assists} asyst"\n`;
+  csv += `"Najlepsza frekwencja","${data.bestAttendance.name}","${data.bestAttendance.percent}%"\n`;
+  
+  return csv;
+}

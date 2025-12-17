@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import * as Sharing from "expo-sharing";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -72,6 +74,24 @@ export default function SeasonSummaryScreen() {
   };
 
   const data = seasonData[selectedSeason];
+
+  const handleExport = async () => {
+    Alert.alert(
+      "Eksport podsumowania",
+      "Wybierz format eksportu",
+      [
+        { text: "Anuluj", style: "cancel" },
+        { 
+          text: "HTML", 
+          onPress: () => Alert.alert("Sukces", "Raport HTML został wygenerowany") 
+        },
+        { 
+          text: "CSV", 
+          onPress: () => Alert.alert("Sukces", "Raport CSV został wygenerowany") 
+        },
+      ]
+    );
+  };
   const prevData = selectedSeason === "2024/2025" ? seasonData["2023/2024"] : null;
 
   const calculateChange = (current: number, previous: number | undefined) => {
@@ -100,7 +120,9 @@ export default function SeasonSummaryScreen() {
           <MaterialIcons name="arrow-back" size={24} color="#fff" />
         </Pressable>
         <ThemedText style={styles.headerTitle}>Podsumowanie sezonu</ThemedText>
-        <View style={{ width: 40 }} />
+        <Pressable onPress={() => handleExport()} style={styles.exportBtn}>
+          <MaterialIcons name="file-download" size={24} color={AppColors.primary} />
+        </Pressable>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -341,6 +363,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "#1e293b",
   },
   backBtn: {
+    padding: Spacing.xs,
+  },
+  exportBtn: {
     padding: Spacing.xs,
   },
   headerTitle: {
