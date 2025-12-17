@@ -278,6 +278,16 @@ export default function MoreScreen() {
             onPress={() => router.push("/bulletin-board" as any)}
           />
           <MenuItem
+            icon="photo-library"
+            label="Galeria zdjęć"
+            onPress={() => router.push("/photo-gallery" as any)}
+          />
+          <MenuItem
+            icon="summarize"
+            label="Podsumowanie sezonu"
+            onPress={() => router.push("/season-summary" as any)}
+          />
+          <MenuItem
             icon="person"
             label="Panel rodzica"
             onPress={() => router.push("/parent-panel" as any)}

@@ -952,3 +952,54 @@ export const announcementReadsRelations = relations(announcementReads, ({ one })
   announcement: one(announcements, { fields: [announcementReads.announcementId], references: [announcements.id] }),
   user: one(users, { fields: [announcementReads.userId], references: [users.id] }),
 }));
+
+
+/**
+ * Photo albums for club events
+ */
+export const photoAlbums = mysqlTable("photoAlbums", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  eventType: mysqlEnum("eventType", ["training", "match", "tournament", "event", "other"]).default("other").notNull(),
+  eventId: int("eventId"), // Optional link to training/match
+  eventDate: timestamp("eventDate"),
+  coverPhotoId: int("coverPhotoId"),
+  photoCount: int("photoCount").default(0).notNull(),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type PhotoAlbum = typeof photoAlbums.$inferSelect;
+export type InsertPhotoAlbum = typeof photoAlbums.$inferInsert;
+
+export const photoAlbumsRelations = relations(photoAlbums, ({ one }) => ({
+  club: one(clubs, { fields: [photoAlbums.clubId], references: [clubs.id] }),
+  creator: one(users, { fields: [photoAlbums.createdBy], references: [users.id] }),
+}));
+
+// Photos table already exists above - using existing photos table with albumId field
+
+/**
+ * Player tags in photos
+ */
+export const photoTags = mysqlTable("photoTags", {
+  id: int("id").autoincrement().primaryKey(),
+  photoId: int("photoId").notNull(),
+  playerId: int("playerId").notNull(),
+  positionX: int("positionX"), // Optional position on photo (percentage)
+  positionY: int("positionY"),
+  taggedBy: int("taggedBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PhotoTag = typeof photoTags.$inferSelect;
+export type InsertPhotoTag = typeof photoTags.$inferInsert;
+
+export const photoTagsRelations = relations(photoTags, ({ one }) => ({
+  photo: one(photos, { fields: [photoTags.photoId], references: [photos.id] }),
+  player: one(players, { fields: [photoTags.playerId], references: [players.id] }),
+  tagger: one(users, { fields: [photoTags.taggedBy], references: [users.id] }),
+}));

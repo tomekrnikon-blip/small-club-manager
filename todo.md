@@ -411,3 +411,25 @@
 - [x] Read status tracking and filtering
 - [x] Pinned announcements support
 - [x] Bulletin board screen (bulletin-board.tsx)
+
+
+## Photo Gallery (Completed)
+- [x] Database schema for photos and albums (photoAlbums, photos, photoTags tables)
+- [x] Photo upload from device camera/gallery
+- [x] Album organization by event/date
+- [x] Player tagging in photos
+- [x] Photo gallery screen (photo-gallery.tsx)
+
+## Calendar Integration (Already Existed)
+- [x] Export events to iCal format
+- [x] Google Calendar integration
+- [x] Apple Calendar integration
+- [x] Subscribe to club calendar feed
+- [x] Calendar export screen (calendar-export.tsx)
+
+## Season Statistics Summary (Completed)
+- [x] Season overview with key metrics
+- [x] Comparison with previous seasons
+- [x] Charts for goals, attendance, results
+- [x] Best performers of the season (top scorer, assister, attendance)
+- [x] Season summary screen (season-summary.tsx)
