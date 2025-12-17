@@ -10,11 +10,13 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { getLoginUrl } from "@/constants/oauth";
 import { useAuth } from "@/hooks/use-auth";
+import { useLogoutConfirm } from "@/hooks/use-logout-confirm";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 
 export default function HomeScreen() {
-  const { user, loading, isAuthenticated, logout } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
+  const { confirmLogout } = useLogoutConfirm();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
@@ -194,7 +196,7 @@ export default function HomeScreen() {
             <Pressable onPress={() => router.push("/notifications" as any)} style={styles.headerButton}>
               <MaterialIcons name="notifications" size={24} color="#94a3b8" />
             </Pressable>
-            <Pressable onPress={logout} style={styles.headerButton}>
+            <Pressable onPress={confirmLogout} style={styles.headerButton}>
               <MaterialIcons name="logout" size={22} color={AppColors.danger} />
             </Pressable>
           </View>

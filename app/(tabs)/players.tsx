@@ -9,6 +9,7 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useLogoutConfirm } from "@/hooks/use-logout-confirm";
 import { useOfflineQuery } from "@/hooks/use-offline-query";
 import { OfflineIndicator } from "@/components/offline-indicator";
 
@@ -27,7 +28,8 @@ const positionLabels: Record<string, string> = {
 };
 
 export default function PlayersScreen() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { confirmLogout } = useLogoutConfirm();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,7 +88,7 @@ export default function PlayersScreen() {
           >
             <MaterialIcons name="person-add" size={24} color="#fff" />
           </Pressable>
-          <Pressable style={styles.logoutButton} onPress={logout}>
+          <Pressable style={styles.logoutButton} onPress={confirmLogout}>
             <MaterialIcons name="logout" size={22} color={AppColors.danger} />
           </Pressable>
         </View>

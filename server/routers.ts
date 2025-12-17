@@ -2521,6 +2521,62 @@ export const appRouter = router({
         return syncClubLeagueData(input.clubId);
       }),
   }),
+
+  // ============================================
+  // ACCOUNT ROUTER
+  // ============================================
+  account: router({
+    deleteAccount: protectedProcedure
+      .input(z.object({
+        confirmText: z.string(), // User must type "USUŃ KONTO" to confirm
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.confirmText !== "USUŃ KONTO") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nieprawidłowe potwierdzenie" });
+        }
+
+        const userId = ctx.user.id;
+        
+        // Check if user is a club owner (manager)
+        const ownedClubs = await db.getClubsByUserId(userId);
+        
+        if (ownedClubs && ownedClubs.length > 0) {
+          // User is a manager - delete all their clubs and related data
+          for (const club of ownedClubs) {
+            // Delete all club-related data
+            await db.deleteClubData(club.id);
+          }
+        } else {
+          // User is not a manager - just remove from club memberships
+          // Stats remain intact
+          await db.removeUserFromAllClubs(userId);
+        }
+        
+        // Delete user account
+        await db.deleteUser(userId);
+        
+        // Clear session
+        ctx.res.setHeader(
+          "Set-Cookie",
+          `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
+        );
+        
+        return { success: true, wasManager: ownedClubs && ownedClubs.length > 0 };
+      }),
+
+    getAccountInfo: protectedProcedure.query(async ({ ctx }) => {
+      const userId = ctx.user.id;
+      const ownedClubs = await db.getClubsByUserId(userId);
+      const memberships = await db.getUserClubMemberships(userId);
+      
+      return {
+        isManager: ownedClubs && ownedClubs.length > 0,
+        ownedClubsCount: ownedClubs?.length || 0,
+        membershipsCount: memberships?.length || 0,
+        ownedClubs: ownedClubs?.map(c => ({ id: c.id, name: c.name })) || [],
+      };
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

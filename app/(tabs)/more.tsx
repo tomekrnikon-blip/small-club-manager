@@ -10,9 +10,12 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
 import { useClubRole } from "@/hooks/use-club-role";
 import { SponsoredSection } from "@/components/ad-banner";
+import { RememberMeSetting } from "@/components/remember-me-setting";
+import { useLogoutConfirm } from "@/hooks/use-logout-confirm";
 
 export default function MoreScreen() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { confirmLogout } = useLogoutConfirm();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -22,17 +25,6 @@ export default function MoreScreen() {
 
   const club = clubs?.[0];
   const { permissions, role } = useClubRole(club?.id);
-
-  const handleLogout = () => {
-    Alert.alert(
-      "Wylogowanie",
-      "Czy na pewno chcesz się wylogować?",
-      [
-        { text: "Anuluj", style: "cancel" },
-        { text: "Wyloguj", style: "destructive", onPress: logout },
-      ]
-    );
-  };
 
   if (!isAuthenticated) {
     return (
@@ -412,11 +404,25 @@ export default function MoreScreen() {
           </View>
         )}
 
+        {/* Account Settings */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Ustawienia konta</ThemedText>
+          <RememberMeSetting />
+        </View>
+
         {/* Logout */}
         <View style={styles.section}>
-          <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <Pressable style={styles.logoutButton} onPress={confirmLogout}>
             <MaterialIcons name="logout" size={20} color={AppColors.danger} />
             <ThemedText style={styles.logoutText}>Wyloguj się</ThemedText>
+          </Pressable>
+        </View>
+
+        {/* Delete Account */}
+        <View style={styles.section}>
+          <Pressable style={styles.deleteAccountButton} onPress={() => router.push('/delete-account' as any)}>
+            <MaterialIcons name="delete-forever" size={20} color="#ef4444" />
+            <ThemedText style={styles.deleteAccountText}>Usuń konto</ThemedText>
           </Pressable>
         </View>
 
@@ -589,6 +595,22 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
+    fontWeight: "600",
+    color: AppColors.danger,
+  },
+  deleteAccountButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.05)",
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.2)",
+  },
+  deleteAccountText: {
+    fontSize: 14,
     fontWeight: "600",
     color: AppColors.danger,
   },

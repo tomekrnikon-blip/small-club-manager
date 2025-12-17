@@ -750,3 +750,19 @@
 - [x] Add logout button to tab bar menu (all 5 tabs)
 - [x] Add logout option in settings/more menu
 - [x] Logout confirmation dialog (in more.tsx)
+
+
+## Logout Enhancements (Completed)
+- [x] Confirmation dialog for all logout buttons
+- [x] Logout animation/farewell screen (farewell.tsx)
+- [x] Remember me option for persistent login (RememberMeSetting component)
+
+
+## Delete Account Feature (Completed)
+- [x] Delete account API endpoint (account.deleteAccount)
+- [x] Role-based deletion logic (manager vs regular user)
+- [x] Manager deletion removes club profile and all data
+- [x] Regular user deletion preserves club stats
+- [x] Delete account confirmation UI with warnings
+- [x] Account info query (account.getAccountInfo)
+- [x] Delete account screen with detailed warnings

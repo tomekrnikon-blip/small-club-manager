@@ -20,6 +20,7 @@ import { ThemedView } from "@/components/themed-view";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
+import { useLogoutConfirm } from "@/hooks/use-logout-confirm";
 import { useOfflineQuery } from "@/hooks/use-offline-query";
 import { OfflineIndicator } from "@/components/offline-indicator";
 import { useClubRole } from "@/hooks/use-club-role";
@@ -47,7 +48,8 @@ interface Team {
 }
 
 export default function CalendarScreen() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const { confirmLogout } = useLogoutConfirm();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const utils = trpc.useUtils();
@@ -419,7 +421,7 @@ export default function CalendarScreen() {
           <Pressable style={styles.todayButton} onPress={goToToday}>
             <ThemedText style={styles.todayButtonText}>Dziś</ThemedText>
           </Pressable>
-          <Pressable style={styles.logoutButton} onPress={logout}>
+          <Pressable style={styles.logoutButton} onPress={confirmLogout}>
             <MaterialIcons name="logout" size={22} color={AppColors.danger} />
           </Pressable>
         </View>

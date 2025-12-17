@@ -1683,3 +1683,116 @@ export async function getUserByPlayerId(playerId: number) {
   const result = await db.select().from(users).where(eq(users.email, player.email)).limit(1);
   return result[0] || null;
 }
+
+
+// ============================================
+// ACCOUNT DELETION FUNCTIONS
+// ============================================
+export async function getUserClubMemberships(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(clubMembers).where(eq(clubMembers.userId, userId));
+}
+
+export async function removeUserFromAllClubs(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  // Soft delete - mark as inactive instead of deleting
+  await db.update(clubMembers).set({ isActive: false }).where(eq(clubMembers.userId, userId));
+}
+
+export async function deleteClubData(clubId: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Delete in order of dependencies (children first)
+  // 1. Delete match-related data
+  const clubMatches = await db.select({ id: matches.id }).from(matches).where(eq(matches.clubId, clubId));
+  for (const match of clubMatches) {
+    await db.delete(matchStats).where(eq(matchStats.matchId, match.id));
+    await db.delete(matchEvents).where(eq(matchEvents.matchId, match.id));
+    await db.delete(matchCallups).where(eq(matchCallups.matchId, match.id));
+  }
+  await db.delete(matches).where(eq(matches.clubId, clubId));
+  
+  // 2. Delete training-related data
+  const clubTrainings = await db.select({ id: trainings.id }).from(trainings).where(eq(trainings.clubId, clubId));
+  for (const training of clubTrainings) {
+    await db.delete(trainingAttendance).where(eq(trainingAttendance.trainingId, training.id));
+  }
+  await db.delete(trainings).where(eq(trainings.clubId, clubId));
+  
+  // 3. Delete player-related data
+  const clubPlayers = await db.select({ id: players.id }).from(players).where(eq(players.clubId, clubId));
+  for (const player of clubPlayers) {
+    await db.delete(playerStats).where(eq(playerStats.playerId, player.id));
+    await db.delete(playerRatings).where(eq(playerRatings.playerId, player.id));
+    await db.delete(playerAchievements).where(eq(playerAchievements.playerId, player.id));
+    await db.delete(injuries).where(eq(injuries.playerId, player.id));
+    await db.delete(parentChildren).where(eq(parentChildren.playerId, player.id));
+  }
+  await db.delete(players).where(eq(players.clubId, clubId));
+  
+  // 4. Delete team data
+  await db.delete(teams).where(eq(teams.clubId, clubId));
+  
+  // 5. Delete finance data
+  await db.delete(finances).where(eq(finances.clubId, clubId));
+  await db.delete(financeCategories).where(eq(financeCategories.clubId, clubId));
+  
+  // 6. Delete academy data
+  const clubStudents = await db.select({ id: academyStudents.id }).from(academyStudents).where(eq(academyStudents.clubId, clubId));
+  for (const student of clubStudents) {
+    await db.delete(academyPayments).where(eq(academyPayments.studentId, student.id));
+  }
+  await db.delete(academyStudents).where(eq(academyStudents.clubId, clubId));
+  
+  // 7. Delete notifications and scheduled notifications
+  await db.delete(notifications).where(eq(notifications.clubId, clubId));
+  await db.delete(scheduledNotifications).where(eq(scheduledNotifications.clubId, clubId));
+  
+  // 8. Delete photos
+  await db.delete(photos).where(eq(photos.clubId, clubId));
+  
+  // 9. Delete club members and invitations
+  await db.delete(clubMembers).where(eq(clubMembers.clubId, clubId));
+  await db.delete(clubInvitations).where(eq(clubInvitations.clubId, clubId));
+  
+  // 10. Delete surveys
+  const clubSurveys = await db.select({ id: surveys.id }).from(surveys).where(eq(surveys.clubId, clubId));
+  for (const survey of clubSurveys) {
+    await db.delete(surveyVotes).where(eq(surveyVotes.surveyId, survey.id));
+    await db.delete(surveyOptions).where(eq(surveyOptions.surveyId, survey.id));
+  }
+  await db.delete(surveys).where(eq(surveys.clubId, clubId));
+  
+  // 11. Delete social media data
+  await db.delete(socialMediaConnections).where(eq(socialMediaConnections.clubId, clubId));
+  await db.delete(socialMediaPosts).where(eq(socialMediaPosts.clubId, clubId));
+  
+  // 12. Delete change history
+  await db.delete(changeHistory).where(eq(changeHistory.clubId, clubId));
+  
+  // 13. Finally delete the club itself
+  await db.delete(clubs).where(eq(clubs.id, clubId));
+}
+
+export async function deleteUser(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  // Delete user subscriptions
+  await db.delete(userSubscriptions).where(eq(userSubscriptions.userId, userId));
+  
+  // Delete push subscriptions
+  await db.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
+  
+  // Delete messages sent by user
+  await db.delete(messages).where(eq(messages.senderId, userId));
+  
+  // Delete parent-child relationships where user is parent
+  await db.delete(parentChildren).where(eq(parentChildren.parentUserId, userId));
+  
+  // Finally delete the user
+  await db.delete(users).where(eq(users.id, userId));
+}
