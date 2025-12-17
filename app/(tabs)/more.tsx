@@ -193,6 +193,16 @@ export default function MoreScreen() {
             onPress={() => router.push("/whatsapp-settings" as any)}
           />
           <MenuItem
+            icon="analytics"
+            label="Statystyki WhatsApp"
+            onPress={() => router.push("/whatsapp-stats" as any)}
+          />
+          <MenuItem
+            icon="sms"
+            label="Integracja SMS"
+            onPress={() => router.push("/sms-settings" as any)}
+          />
+          <MenuItem
             icon="schedule"
             label="Automatyczne przypomnienia"
             onPress={() => router.push("/auto-reminders" as any)}
