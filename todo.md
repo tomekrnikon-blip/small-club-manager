@@ -687,3 +687,11 @@
 - [x] League selection flow (country → region → league → team)
 - [ ] Language localization based on country
 - [ ] Store selected country in user preferences
+
+
+## New Countries Support (Completed)
+- [x] England (FA) - National League System (Step 5-10)
+- [x] Netherlands (KNVB) - Amateur leagues (Derde Divisie - Vierde Klasse)
+- [x] Belgium (KBVB) - Provincial leagues (Eerste Amateur - 3e Provinciale)
+- [x] Denmark (DBU) - Danmarksserien (2. Division - Serie 2)
+- [x] Sweden (SvFF) - Division system (Division 1-7)
