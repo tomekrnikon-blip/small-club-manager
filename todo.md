@@ -225,3 +225,9 @@
 - [x] Training attendance tracking - mark who attended from invited groups (training/[id].tsx)
 - [x] Player frequency statistics for trainings (player-stats/[id].tsx)
 - [x] Player frequency statistics for matches
+
+
+## Attendance Enhancements (In Progress)
+- [x] Attendance notifications for unmarked players after training (attendance-notifications.ts, training/[id].tsx)
+- [x] Frequency report PDF export for team (frequency-report.tsx)
+- [x] Absence excuse system with reasons (absence-excuse.tsx, training/[id].tsx)

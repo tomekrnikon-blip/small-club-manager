@@ -18,6 +18,12 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
 import { useClubRole } from "@/hooks/use-club-role";
 import { addTrainingToCalendar } from "@/lib/system-calendar";
+import {
+  getUnmarkedPlayers,
+  hasEventEnded,
+  generateAttendanceReminderMessage,
+} from "@/lib/attendance-notifications";
+import * as Notifications from 'expo-notifications';
 
 export default function TrainingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,6 +34,7 @@ export default function TrainingDetailScreen() {
   
   const [isDeleting, setIsDeleting] = useState(false);
   const [updatingAttendance, setUpdatingAttendance] = useState<number | null>(null);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
 
   const { data: training, isLoading } = trpc.trainings.get.useQuery(
     { id: Number(id) },
@@ -176,6 +183,49 @@ export default function TrainingDetailScreen() {
     }
   };
 
+  const handleSendAttendanceReminder = async () => {
+    if (!training || !attendance || !players) return;
+    
+    const unmarkedPlayers = getUnmarkedPlayers(
+      attendance.map(a => ({ playerId: a.playerId, attended: a.attended })),
+      players.filter(p => invitedPlayerIds.has(p.id))
+    );
+    
+    if (unmarkedPlayers.length === 0) {
+      Alert.alert("Info", "Wszyscy zawodnicy mają oznaczoną obecność.");
+      return;
+    }
+    
+    setIsSendingReminder(true);
+    
+    try {
+      const { title, body } = generateAttendanceReminderMessage(
+        'training',
+        new Date(training.trainingDate),
+        unmarkedPlayers.length
+      );
+      
+      // Send local notification to coach
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          data: { trainingId: training.id },
+        },
+        trigger: null, // Immediate
+      });
+      
+      Alert.alert(
+        "Przypomnienie wysłane",
+        `Wysłano przypomnienie o ${unmarkedPlayers.length} nieoznaczonych zawodnikach:\n${unmarkedPlayers.map(p => `• ${p.name}`).join('\n')}`
+      );
+    } catch (error) {
+      Alert.alert("Błąd", "Nie udało się wysłać przypomnienia");
+    } finally {
+      setIsSendingReminder(false);
+    }
+  };
+
   const getAttendanceIcon = (status: number) => {
     switch (status) {
       case 1: return "check-circle";
@@ -311,6 +361,26 @@ export default function TrainingDetailScreen() {
                   <ThemedText style={styles.statLabel}>Frekwencja</ThemedText>
                 </View>
               </View>
+              
+              {/* Reminder Button */}
+              {attendanceStats.pending > 0 && permissions.canEditClub && (
+                <Pressable
+                  style={[styles.reminderBtn, isSendingReminder && styles.reminderBtnDisabled]}
+                  onPress={handleSendAttendanceReminder}
+                  disabled={isSendingReminder}
+                >
+                  {isSendingReminder ? (
+                    <ActivityIndicator size="small" color={AppColors.warning} />
+                  ) : (
+                    <>
+                      <MaterialIcons name="notifications-active" size={20} color={AppColors.warning} />
+                      <ThemedText style={styles.reminderBtnText}>
+                        Wyślij przypomnienie ({attendanceStats.pending})
+                      </ThemedText>
+                    </>
+                  )}
+                </Pressable>
+              )}
             </View>
           )}
 
@@ -333,32 +403,52 @@ export default function TrainingDetailScreen() {
                     const isUpdating = updatingAttendance === player.id;
                     
                     return (
-                      <Pressable
-                        key={player.id}
-                        style={[styles.playerRow, isUpdating && styles.playerRowUpdating]}
-                        onPress={() => permissions.canEditClub && handleToggleAttendance(player.id)}
-                        disabled={!permissions.canEditClub || isUpdating}
-                      >
-                        <View style={styles.playerInfo}>
-                          <ThemedText style={styles.playerName}>{player.name}</ThemedText>
-                          <ThemedText style={styles.playerPosition}>{player.position}</ThemedText>
-                        </View>
-                        
-                        {isUpdating ? (
-                          <ActivityIndicator size="small" color={AppColors.primary} />
-                        ) : (
-                          <View style={styles.attendanceStatus}>
-                            <MaterialIcons
-                              name={getAttendanceIcon(status) as any}
-                              size={24}
-                              color={getAttendanceColor(status)}
-                            />
-                            <ThemedText style={[styles.attendanceLabel, { color: getAttendanceColor(status) }]}>
-                              {getAttendanceLabel(status)}
-                            </ThemedText>
+                      <View key={player.id} style={styles.playerRowContainer}>
+                        <Pressable
+                          style={[styles.playerRow, isUpdating && styles.playerRowUpdating]}
+                          onPress={() => permissions.canEditClub && handleToggleAttendance(player.id)}
+                          disabled={!permissions.canEditClub || isUpdating}
+                        >
+                          <View style={styles.playerInfo}>
+                            <ThemedText style={styles.playerName}>{player.name}</ThemedText>
+                            <ThemedText style={styles.playerPosition}>{player.position}</ThemedText>
                           </View>
+                          
+                          {isUpdating ? (
+                            <ActivityIndicator size="small" color={AppColors.primary} />
+                          ) : (
+                            <View style={styles.attendanceStatus}>
+                              <MaterialIcons
+                                name={getAttendanceIcon(status) as any}
+                                size={24}
+                                color={getAttendanceColor(status)}
+                              />
+                              <ThemedText style={[styles.attendanceLabel, { color: getAttendanceColor(status) }]}>
+                                {getAttendanceLabel(status)}
+                              </ThemedText>
+                            </View>
+                          )}
+                        </Pressable>
+                        
+                        {/* Excuse button for absent players */}
+                        {status === 2 && (
+                          <Pressable
+                            style={styles.excuseBtn}
+                            onPress={() => router.push({
+                              pathname: "/absence-excuse" as any,
+                              params: {
+                                eventId: id,
+                                eventType: 'training',
+                                playerId: player.id.toString(),
+                                playerName: player.name,
+                              },
+                            })}
+                          >
+                            <MaterialIcons name="edit-note" size={16} color={AppColors.warning} />
+                            <ThemedText style={styles.excuseBtnText}>Usprawiedliw</ThemedText>
+                          </Pressable>
                         )}
-                      </Pressable>
+                      </View>
                     );
                   })}
                 </View>
@@ -623,5 +713,41 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: AppColors.danger,
+  },
+  reminderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: AppColors.warning,
+  },
+  reminderBtnDisabled: {
+    opacity: 0.6,
+  },
+  reminderBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: AppColors.warning,
+  },
+  playerRowContainer: {
+    marginBottom: 2,
+  },
+  excuseBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginLeft: 42,
+    marginBottom: 8,
+  },
+  excuseBtnText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: AppColors.warning,
   },
 });

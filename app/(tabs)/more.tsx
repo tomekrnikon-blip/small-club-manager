@@ -136,6 +136,11 @@ export default function MoreScreen() {
             onPress={() => router.push("/reports" as any)}
           />
           <MenuItem
+            icon="bar-chart"
+            label="Raport frekwencji"
+            onPress={() => router.push("/frequency-report" as any)}
+          />
+          <MenuItem
             icon="file-download"
             label="Eksport danych (CSV)"
             onPress={() => router.push("/export" as any)}
