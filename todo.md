@@ -825,3 +825,26 @@
 - [x] Production AdMob ID configuration (admob-config.ts)
 - [x] FCM token registration service
 - [x] Notification channels for Android (default, alerts, reminders)
+
+
+## Onboarding & Payments (In Progress)
+- [ ] Onboarding welcome screen
+- [ ] Country selection step
+- [ ] Club creation/selection step
+- [ ] RevenueCat integration for subscriptions
+- [ ] Subscription plans configuration
+- [ ] E2E tests for registration flow
+- [ ] E2E tests for match creation flow
+- [ ] E2E tests for statistics flow
+
+
+## Onboarding Flow (Completed)
+- [x] Welcome screen with app features overview
+- [x] Country selection screen (14 countries with football associations)
+- [x] Club setup screen (name, city, type)
+- [x] Completion screen with trial info and next steps
+- [x] Animated transitions between onboarding steps
+- [x] Progress indicators (step 1/2/3)
+- [x] Skip option for returning users
+- [x] AsyncStorage for onboarding state persistence
+- [x] Auto-redirect new users to onboarding flow

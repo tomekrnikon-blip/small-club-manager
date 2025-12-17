@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, Pressable, StyleSheet, View, ScrollView, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -90,8 +91,42 @@ export default function HomeScreen() {
     }
   };
 
-  // Not authenticated - show welcome screen
+  // Check if onboarding is completed
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(true);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const completed = await AsyncStorage.getItem('onboarding_completed');
+        setOnboardingCompleted(completed === 'true');
+      } catch (error) {
+        console.error('Error checking onboarding:', error);
+      } finally {
+        setOnboardingChecked(true);
+      }
+    };
+    checkOnboarding();
+  }, []);
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (onboardingChecked && !onboardingCompleted && !isAuthenticated && !loading) {
+      router.replace('/onboarding/welcome');
+    }
+  }, [onboardingChecked, onboardingCompleted, isAuthenticated, loading]);
+
+  // Not authenticated - show welcome screen with login option
   if (!isAuthenticated && !loading) {
+    // If onboarding not checked yet, show loading
+    if (!onboardingChecked) {
+      return (
+        <ThemedView style={[styles.container, styles.centered]}>
+          <ActivityIndicator size="large" color={AppColors.primary} />
+        </ThemedView>
+      );
+    }
+
     return (
       <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.welcomeContainer}>
@@ -124,6 +159,15 @@ export default function HomeScreen() {
               <ThemedText style={styles.loginText}>Zaloguj się</ThemedText>
             )}
           </Pressable>
+
+          {onboardingCompleted && (
+            <Pressable
+              onPress={() => router.push('/onboarding/welcome')}
+              style={styles.onboardingLink}
+            >
+              <ThemedText style={styles.onboardingLinkText}>Rozpocznij od nowa</ThemedText>
+            </Pressable>
+          )}
         </View>
       </ThemedView>
     );
@@ -614,5 +658,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#e2e8f0",
     textAlign: "center",
+  },
+  onboardingLink: {
+    marginTop: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  onboardingLinkText: {
+    color: "#64748b",
+    fontSize: 14,
+    textDecorationLine: "underline",
   },
 });
