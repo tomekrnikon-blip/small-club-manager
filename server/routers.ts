@@ -2039,6 +2039,129 @@ export const appRouter = router({
         return { success: true };
       }),
   }),
+
+  // ============================================
+  // MESSAGES ROUTER
+  // ============================================
+  messages: router({
+    send: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        receiverId: z.number(),
+        playerId: z.number().optional(),
+        content: z.string().min(1).max(2000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        }
+        
+        // Generate thread ID
+        const ids = [ctx.user.id, input.receiverId].sort((a, b) => a - b);
+        const threadId = input.playerId 
+          ? `thread_${ids[0]}_${ids[1]}_player_${input.playerId}`
+          : `thread_${ids[0]}_${ids[1]}`;
+        
+        const id = await db.createMessage({
+          clubId: input.clubId,
+          threadId,
+          senderId: ctx.user.id,
+          receiverId: input.receiverId,
+          playerId: input.playerId,
+          content: input.content,
+        });
+        
+        return { id, threadId };
+      }),
+    
+    getThreads: protectedProcedure.query(async ({ ctx }) => {
+      const threads = await db.getMessageThreadsForUser(ctx.user.id);
+      
+      // Enrich with user info
+      const enriched = [];
+      for (const thread of threads) {
+        const otherUserId = thread.senderId === ctx.user.id ? thread.receiverId : thread.senderId;
+        const otherUser = await db.getUserById(otherUserId);
+        const player = thread.playerId ? await db.getPlayerById(thread.playerId) : null;
+        
+        enriched.push({
+          ...thread,
+          otherUser,
+          player,
+        });
+      }
+      
+      return enriched;
+    }),
+    
+    getThread: protectedProcedure
+      .input(z.object({ threadId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        // Mark messages as read
+        await db.markMessagesAsRead(input.threadId, ctx.user.id);
+        
+        const messages = await db.getMessagesByThreadId(input.threadId);
+        
+        // Enrich with sender info
+        const enriched = [];
+        for (const msg of messages) {
+          const sender = await db.getUserById(msg.senderId);
+          enriched.push({ ...msg, sender });
+        }
+        
+        return enriched;
+      }),
+    
+    getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUnreadMessageCount(ctx.user.id);
+    }),
+    
+    markAsRead: protectedProcedure
+      .input(z.object({ threadId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.markMessagesAsRead(input.threadId, ctx.user.id);
+        return { success: true };
+      }),
+  }),
+
+  // ============================================
+  // PUSH SUBSCRIPTIONS ROUTER
+  // ============================================
+  pushSubscriptions: router({
+    subscribe: protectedProcedure
+      .input(z.object({
+        endpoint: z.string(),
+        p256dh: z.string(),
+        auth: z.string(),
+        deviceType: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check if subscription already exists
+        const existing = await db.getPushSubscriptionByEndpoint(input.endpoint);
+        if (existing) {
+          return { id: existing.id };
+        }
+        
+        const id = await db.createPushSubscription({
+          userId: ctx.user.id,
+          ...input,
+        });
+        
+        return { id };
+      }),
+    
+    unsubscribe: protectedProcedure
+      .input(z.object({ endpoint: z.string() }))
+      .mutation(async ({ input }) => {
+        await db.deactivatePushSubscription(input.endpoint);
+        return { success: true };
+      }),
+    
+    getMySubscriptions: protectedProcedure.query(async ({ ctx }) => {
+      return db.getPushSubscriptionsByUserId(ctx.user.id);
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

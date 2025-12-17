@@ -284,3 +284,22 @@
 - [x] Top scorers ranking
 - [x] Season summary statistics
 - [x] Team performance indicators (team-statistics.tsx)
+
+
+## Messaging System (Completed)
+- [x] Database schema for messages (messages table)
+- [x] Message threads between coach and parent
+- [x] Unread message counter
+- [x] Message notifications
+- [x] Messages screen UI (messages.tsx)
+
+## Push Notifications (Completed)
+- [x] Push notification service setup (pushNotificationService.ts)
+- [x] Automatic reminders for upcoming trainings
+- [x] Schedule change notifications
+- [x] Parent notification preferences (push-settings.tsx)
+
+## Statistics Export (Completed)
+- [x] PDF/HTML/CSV export from team statistics dashboard
+- [x] Include charts and rankings in export
+- [x] Season summary report generation (statistics-export.tsx)

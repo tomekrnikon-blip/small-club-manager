@@ -668,3 +668,51 @@ export const parentChildrenRelations = relations(parentChildren, ({ one }) => ({
   parent: one(users, { fields: [parentChildren.parentUserId], references: [users.id] }),
   player: one(players, { fields: [parentChildren.playerId], references: [players.id] }),
 }));
+
+
+/**
+ * Messages table - direct messages between coaches and parents
+ */
+export const messages = mysqlTable("messages", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  threadId: varchar("threadId", { length: 64 }).notNull(), // Format: "coach_{coachId}_parent_{parentId}_player_{playerId}"
+  senderId: int("senderId").notNull(),
+  receiverId: int("receiverId").notNull(),
+  playerId: int("playerId"), // The player this conversation is about
+  content: text("content").notNull(),
+  isRead: boolean("isRead").default(false).notNull(),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = typeof messages.$inferInsert;
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  sender: one(users, { fields: [messages.senderId], references: [users.id] }),
+  receiver: one(users, { fields: [messages.receiverId], references: [users.id] }),
+  player: one(players, { fields: [messages.playerId], references: [players.id] }),
+}));
+
+/**
+ * Push notification subscriptions for parents
+ */
+export const pushSubscriptions = mysqlTable("pushSubscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  endpoint: text("endpoint").notNull(),
+  p256dh: varchar("p256dh", { length: 255 }).notNull(),
+  auth: varchar("auth", { length: 255 }).notNull(),
+  deviceType: varchar("deviceType", { length: 50 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = typeof pushSubscriptions.$inferInsert;
+
+export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one }) => ({
+  user: one(users, { fields: [pushSubscriptions.userId], references: [users.id] }),
+}));

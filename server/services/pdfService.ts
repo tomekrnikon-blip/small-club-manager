@@ -508,3 +508,267 @@ export function generateFrequencyExcelData(frequencyData: any[]): {
     ]),
   };
 }
+
+
+/**
+ * Generate team statistics report data for PDF export
+ */
+export async function generateTeamStatisticsReport(
+  clubId: number,
+  teamId?: number,
+  dateFrom?: Date,
+  dateTo?: Date
+): Promise<ReportData> {
+  const club = await db.getClubById(clubId);
+  const teams = await db.getTeamsByClubId(clubId);
+  const players = await db.getPlayersByClubId(clubId);
+  const matches = await db.getMatchesByClubId(clubId);
+  const trainings = await db.getTrainingsByClubId(clubId);
+
+  // Filter by team if specified
+  const filteredMatches = teamId 
+    ? matches.filter(m => m.teamId === teamId)
+    : matches;
+
+  // Filter by date range if specified
+  const dateFilteredMatches = filteredMatches.filter(m => {
+    const matchDate = new Date(m.matchDate);
+    if (dateFrom && matchDate < dateFrom) return false;
+    if (dateTo && matchDate > dateTo) return false;
+    return true;
+  });
+
+  // Calculate match statistics
+  const wins = dateFilteredMatches.filter(m => m.result === 'win').length;
+  const draws = dateFilteredMatches.filter(m => m.result === 'draw').length;
+  const losses = dateFilteredMatches.filter(m => m.result === 'loss').length;
+  const totalMatches = wins + draws + losses;
+
+  const goalsScored = dateFilteredMatches.reduce((sum, m) => sum + (m.goalsScored || 0), 0);
+  const goalsConceded = dateFilteredMatches.reduce((sum, m) => sum + (m.goalsConceded || 0), 0);
+
+  const winRate = totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0;
+  const avgGoalsScored = totalMatches > 0 ? (goalsScored / totalMatches).toFixed(2) : '0';
+  const avgGoalsConceded = totalMatches > 0 ? (goalsConceded / totalMatches).toFixed(2) : '0';
+
+  // Get top scorers (from player stats)
+  const playerStatsPromises = players.map(async (player) => {
+    const stats = await db.getPlayerStats(player.id);
+    return {
+      name: player.name,
+      position: player.position || '-',
+      goals: stats[0]?.goals || 0,
+      assists: stats[0]?.assists || 0,
+      matches: stats[0]?.matchesPlayed || 0,
+    };
+  });
+  const playerStats = await Promise.all(playerStatsPromises);
+  const topScorers = playerStats
+    .filter(p => p.goals > 0)
+    .sort((a, b) => b.goals - a.goals)
+    .slice(0, 10);
+
+  // Recent results
+  const recentResults = dateFilteredMatches
+    .filter(m => m.result)
+    .sort((a, b) => new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime())
+    .slice(0, 10)
+    .map(m => ({
+      date: new Date(m.matchDate).toLocaleDateString('pl-PL'),
+      opponent: m.opponent,
+      result: m.result === 'win' ? 'W' : m.result === 'draw' ? 'R' : 'P',
+      score: `${m.goalsScored || 0}:${m.goalsConceded || 0}`,
+      location: m.homeAway === 'home' ? 'Dom' : 'Wyjazd',
+    }));
+
+  const selectedTeam = teamId ? teams.find(t => t.id === teamId) : null;
+  const reportTitle = selectedTeam 
+    ? `Statystyki drużyny: ${selectedTeam.name}`
+    : 'Statystyki klubu';
+
+  const dateRangeText = dateFrom || dateTo
+    ? `Okres: ${dateFrom?.toLocaleDateString('pl-PL') || 'początek'} - ${dateTo?.toLocaleDateString('pl-PL') || 'teraz'}`
+    : `Sezon ${new Date().getFullYear()}`;
+
+  return {
+    title: reportTitle,
+    subtitle: dateRangeText,
+    generatedAt: new Date(),
+    clubName: club?.name || 'Klub',
+    sections: [
+      {
+        title: 'Podsumowanie wyników',
+        type: 'summary',
+        data: {
+          'Rozegrane mecze': totalMatches,
+          'Wygrane': wins,
+          'Remisy': draws,
+          'Porażki': losses,
+          'Skuteczność': `${winRate}%`,
+          'Bramki strzelone': goalsScored,
+          'Bramki stracone': goalsConceded,
+          'Bilans bramek': goalsScored - goalsConceded,
+          'Średnia bramek strzelonych': avgGoalsScored,
+          'Średnia bramek straconych': avgGoalsConceded,
+        },
+      },
+      {
+        title: 'Najlepsi strzelcy',
+        type: 'table',
+        data: {
+          headers: ['Lp.', 'Zawodnik', 'Pozycja', 'Gole', 'Asysty', 'Mecze'],
+          rows: topScorers.map((p, i) => [
+            (i + 1).toString(),
+            p.name,
+            p.position,
+            p.goals.toString(),
+            p.assists.toString(),
+            p.matches.toString(),
+          ]),
+        },
+      },
+      {
+        title: 'Ostatnie wyniki',
+        type: 'table',
+        data: {
+          headers: ['Data', 'Przeciwnik', 'Wynik', 'Rezultat', 'Miejsce'],
+          rows: recentResults.map(r => [
+            r.date,
+            r.opponent,
+            r.score,
+            r.result,
+            r.location,
+          ]),
+        },
+      },
+      {
+        title: 'Informacje o drużynie',
+        type: 'summary',
+        data: {
+          'Liczba zawodników': players.length,
+          'Liczba drużyn': teams.length,
+          'Treningów w sezonie': trainings.length,
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Generate HTML report from report data
+ */
+export function generateHtmlReport(report: ReportData): string {
+  let html = `
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${report.title}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; padding: 30px; text-align: center; }
+    .header h1 { font-size: 24px; margin-bottom: 8px; }
+    .header p { opacity: 0.9; font-size: 14px; }
+    .meta { display: flex; justify-content: space-between; padding: 15px 30px; background: #f1f5f9; font-size: 12px; color: #64748b; }
+    .content { padding: 30px; }
+    .section { margin-bottom: 30px; }
+    .section h2 { font-size: 18px; color: #22c55e; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e2e8f0; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+    .summary-item { background: #f8fafc; border-radius: 8px; padding: 15px; text-align: center; }
+    .summary-item .value { font-size: 24px; font-weight: bold; color: #22c55e; }
+    .summary-item .label { font-size: 12px; color: #64748b; margin-top: 5px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: #f8fafc; font-weight: 600; font-size: 12px; text-transform: uppercase; color: #64748b; }
+    tr:hover { background: #f8fafc; }
+    .footer { text-align: center; padding: 20px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${report.title}</h1>
+      <p>${report.subtitle || ''}</p>
+    </div>
+    <div class="meta">
+      <span>Klub: ${report.clubName}</span>
+      <span>Wygenerowano: ${report.generatedAt.toLocaleString('pl-PL')}</span>
+    </div>
+    <div class="content">
+`;
+
+  for (const section of report.sections) {
+    html += `<div class="section"><h2>${section.title}</h2>`;
+    
+    if (section.type === 'summary') {
+      html += '<div class="summary-grid">';
+      for (const [label, value] of Object.entries(section.data)) {
+        html += `<div class="summary-item"><div class="value">${value}</div><div class="label">${label}</div></div>`;
+      }
+      html += '</div>';
+    } else if (section.type === 'table') {
+      html += '<table><thead><tr>';
+      for (const header of section.data.headers) {
+        html += `<th>${header}</th>`;
+      }
+      html += '</tr></thead><tbody>';
+      for (const row of section.data.rows) {
+        html += '<tr>';
+        for (const cell of row) {
+          html += `<td>${cell}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+    }
+    
+    html += '</div>';
+  }
+
+  html += `
+    </div>
+    <div class="footer">
+      Small Club Manager - Raport wygenerowany automatycznie
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+  return html;
+}
+
+/**
+ * Generate CSV from report data
+ */
+export function generateCsvReport(report: ReportData): string {
+  let csv = '';
+  
+  // Add header
+  csv += `"${report.title}"\n`;
+  csv += `"${report.subtitle || ''}"\n`;
+  csv += `"Klub: ${report.clubName}"\n`;
+  csv += `"Wygenerowano: ${report.generatedAt.toLocaleString('pl-PL')}"\n\n`;
+
+  for (const section of report.sections) {
+    csv += `"${section.title}"\n`;
+    
+    if (section.type === 'summary') {
+      for (const [label, value] of Object.entries(section.data)) {
+        csv += `"${label}","${value}"\n`;
+      }
+    } else if (section.type === 'table') {
+      csv += section.data.headers.map((h: string) => `"${h}"`).join(',') + '\n';
+      for (const row of section.data.rows) {
+        csv += row.map((c: string) => `"${c}"`).join(',') + '\n';
+      }
+    }
+    
+    csv += '\n';
+  }
+
+  return csv;
+}

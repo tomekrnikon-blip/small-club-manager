@@ -248,6 +248,21 @@ export default function MoreScreen() {
             onPress={() => router.push("/team-statistics" as any)}
           />
           <MenuItem
+            icon="chat"
+            label="Wiadomości"
+            onPress={() => router.push("/messages" as any)}
+          />
+          <MenuItem
+            icon="notifications-active"
+            label="Powiadomienia push"
+            onPress={() => router.push("/push-settings" as any)}
+          />
+          <MenuItem
+            icon="assessment"
+            label="Eksport statystyk"
+            onPress={() => router.push("/statistics-export" as any)}
+          />
+          <MenuItem
             icon="schedule"
             label="Automatyczne przypomnienia"
             onPress={() => router.push("/auto-reminders" as any)}

@@ -26,6 +26,8 @@ import {
   InsertUserSubscription, userSubscriptions,
   InsertPlayerRating, playerRatings,
   InsertParentChild, parentChildren,
+  InsertMessage, messages,
+  InsertPushSubscription, pushSubscriptions,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1253,4 +1255,109 @@ export async function deleteParentChild(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(parentChildren).where(eq(parentChildren.id, id));
+}
+
+
+// ============================================
+// MESSAGES FUNCTIONS
+// ============================================
+export async function createMessage(data: InsertMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(messages).values(data);
+  return result[0].insertId;
+}
+
+export async function getMessagesByThreadId(threadId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(messages).where(eq(messages.threadId, threadId)).orderBy(messages.createdAt);
+}
+
+export async function getMessageThreadsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Get all messages where user is sender or receiver
+  const allMessages = await db.select().from(messages).where(
+    or(
+      eq(messages.senderId, userId),
+      eq(messages.receiverId, userId)
+    )
+  ).orderBy(desc(messages.createdAt));
+  
+  // Group by threadId and get latest message per thread
+  const threads: Record<string, typeof allMessages[0]> = {};
+  for (const msg of allMessages) {
+    if (!threads[msg.threadId]) {
+      threads[msg.threadId] = msg;
+    }
+  }
+  
+  return Object.values(threads);
+}
+
+export async function getUnreadMessageCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const unread = await db.select().from(messages).where(
+    and(
+      eq(messages.receiverId, userId),
+      eq(messages.isRead, false)
+    )
+  );
+  return unread.length;
+}
+
+export async function markMessagesAsRead(threadId: string, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(messages).set({ isRead: true, readAt: new Date() }).where(
+    and(
+      eq(messages.threadId, threadId),
+      eq(messages.receiverId, userId),
+      eq(messages.isRead, false)
+    )
+  );
+}
+
+export async function getMessageById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(messages).where(eq(messages.id, id)).limit(1);
+  return result[0];
+}
+
+// ============================================
+// PUSH SUBSCRIPTIONS FUNCTIONS
+// ============================================
+export async function createPushSubscription(data: InsertPushSubscription) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(pushSubscriptions).values(data);
+  return result[0].insertId;
+}
+
+export async function getPushSubscriptionsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(pushSubscriptions).where(
+    and(
+      eq(pushSubscriptions.userId, userId),
+      eq(pushSubscriptions.isActive, true)
+    )
+  );
+}
+
+export async function deactivatePushSubscription(endpoint: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(pushSubscriptions).set({ isActive: false }).where(eq(pushSubscriptions.endpoint, endpoint));
+}
+
+export async function getPushSubscriptionByEndpoint(endpoint: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint)).limit(1);
+  return result[0];
 }
