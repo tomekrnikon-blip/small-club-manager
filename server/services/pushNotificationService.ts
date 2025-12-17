@@ -189,3 +189,144 @@ function formatDateTime(date: Date): string {
     minute: '2-digit',
   });
 }
+
+
+/**
+ * Send notification to all admin users
+ */
+export async function sendPushToAdmins(payload: PushNotificationPayload): Promise<{ sent: number; failed: number }> {
+  // Get all admin users
+  const admins = await db.getAdminUsers();
+  
+  let totalSent = 0;
+  let totalFailed = 0;
+
+  for (const admin of admins) {
+    const result = await sendPushToUser(admin.id, payload);
+    totalSent += result.sent;
+    totalFailed += result.failed;
+  }
+
+  console.log(`[Push] Admin notification sent: ${totalSent} successful, ${totalFailed} failed`);
+  return { sent: totalSent, failed: totalFailed };
+}
+
+/**
+ * Notify admins about new club registration
+ */
+export async function notifyAdminsNewRegistration(
+  clubName: string,
+  managerEmail: string,
+  managerName: string
+): Promise<void> {
+  await sendPushToAdmins({
+    title: '🆕 Nowa rejestracja klubu',
+    body: `Klub "${clubName}" został zarejestrowany przez ${managerName}`,
+    data: {
+      type: 'new_registration',
+      clubName,
+      managerEmail,
+      managerName,
+    },
+  });
+
+  // Also create in-app notification for admins
+  const admins = await db.getAdminUsers();
+  for (const admin of admins) {
+    await db.createNotification({
+      userId: admin.id,
+      clubId: 0, // System notification
+      type: 'general',
+      title: 'Nowa rejestracja klubu',
+      message: `Klub "${clubName}" został zarejestrowany przez ${managerName} (${managerEmail})`,
+    });
+  }
+}
+
+/**
+ * Notify admins about trial expiring soon
+ */
+export async function notifyAdminsTrialExpiring(
+  clubId: number,
+  clubName: string,
+  managerEmail: string,
+  daysRemaining: number
+): Promise<void> {
+  const urgency = daysRemaining <= 1 ? '🔴' : daysRemaining <= 3 ? '🟡' : '🟢';
+  
+  await sendPushToAdmins({
+    title: `${urgency} Trial wygasa za ${daysRemaining} dni`,
+    body: `Klub "${clubName}" - trial kończy się wkrótce`,
+    data: {
+      type: 'trial_expiring',
+      clubId,
+      clubName,
+      managerEmail,
+      daysRemaining,
+    },
+  });
+}
+
+/**
+ * Notify admins about trial expired
+ */
+export async function notifyAdminsTrialExpired(
+  clubId: number,
+  clubName: string,
+  managerEmail: string
+): Promise<void> {
+  await sendPushToAdmins({
+    title: '⏰ Trial wygasł',
+    body: `Klub "${clubName}" - okres próbny zakończony`,
+    data: {
+      type: 'trial_expired',
+      clubId,
+      clubName,
+      managerEmail,
+    },
+  });
+
+  // Also create in-app notification for admins
+  const admins = await db.getAdminUsers();
+  for (const admin of admins) {
+    await db.createNotification({
+      userId: admin.id,
+      clubId: clubId,
+      type: 'general',
+      title: 'Trial wygasł',
+      message: `Klub "${clubName}" - okres próbny zakończony. Manager: ${managerEmail}`,
+    });
+  }
+}
+
+/**
+ * Notify admins about new subscription
+ */
+export async function notifyAdminsNewSubscription(
+  clubName: string,
+  planName: string,
+  managerEmail: string
+): Promise<void> {
+  await sendPushToAdmins({
+    title: '⭐ Nowa subskrypcja',
+    body: `Klub "${clubName}" wykupił plan ${planName}`,
+    data: {
+      type: 'new_subscription',
+      clubName,
+      planName,
+      managerEmail,
+    },
+  });
+
+  // Also create in-app notification for admins
+  const admins = await db.getAdminUsers();
+  for (const admin of admins) {
+    await db.createNotification({
+      userId: admin.id,
+      clubId: 0, // System notification
+      type: 'general',
+      title: 'Nowa subskrypcja',
+      message: `Klub "${clubName}" wykupił plan ${planName}. Manager: ${managerEmail}`,
+    });
+  }
+}

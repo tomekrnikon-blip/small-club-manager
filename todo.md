@@ -807,3 +807,13 @@
 - [x] Trial to subscription conversion rate
 - [x] Daily activity chart
 - [x] Conversion sources breakdown
+
+
+## Admin Access & Notifications (Completed)
+- [x] Add admin panel link to More tab (for isMasterAdmin users)
+- [x] Role-based visibility for admin features
+- [x] Admin push notifications for new registrations
+- [x] Admin push notifications for expiring trials
+- [x] Admin push notifications for new subscriptions
+- [x] Admin alerts screen (admin/alerts.tsx)
+- [x] getAdminUsers database function

@@ -1840,3 +1840,15 @@ export async function getUsersScheduledForDeletion() {
       )
     );
 }
+
+
+// ============================================
+// ADMIN FUNCTIONS
+// ============================================
+
+// Get all admin users (for admin notifications)
+export async function getAdminUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(users).where(eq(users.isMasterAdmin, true));
+}

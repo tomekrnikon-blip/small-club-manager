@@ -394,11 +394,29 @@ export default function MoreScreen() {
         {/* Master Admin Section */}
         {user?.isMasterAdmin && (
           <View style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Master Admin</ThemedText>
+            <ThemedText style={styles.sectionTitle}>Panel Administratora</ThemedText>
             <MenuItem
               icon="admin-panel-settings"
               label="Panel administracyjny"
               onPress={() => router.push("/admin" as any)}
+              highlight
+            />
+            <MenuItem
+              icon="timer"
+              label="Zarządzanie trialami"
+              onPress={() => router.push("/admin/trials" as any)}
+              highlight
+            />
+            <MenuItem
+              icon="trending-up"
+              label="Statystyki konwersji"
+              onPress={() => router.push("/admin/stats" as any)}
+              highlight
+            />
+            <MenuItem
+              icon="notifications-active"
+              label="Alerty admina"
+              onPress={() => router.push("/admin/alerts" as any)}
               highlight
             />
           </View>
