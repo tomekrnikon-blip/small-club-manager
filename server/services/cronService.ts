@@ -7,7 +7,9 @@
  * In production, this should be run as a separate process or scheduled task.
  */
 
-import * as db from "../db.js";
+import * as db from "../db";
+import { scheduledSync as leagueScheduledSync } from "./leagueScrapingService";
+import { scheduleLeagueSync as pzpnScheduledSync } from "./pzpnService";
 import { sendSMS, sendAppNotification } from "./notificationService.js";
 
 // Process interval in milliseconds (default: 1 minute)
@@ -205,6 +207,19 @@ export function startCronService(): void {
   setInterval(async () => {
     await processAcademyPaymentReminders();
   }, 60 * 60 * 1000);
+  
+  // Sync league data every 24 hours
+  const LEAGUE_SYNC_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+  setInterval(async () => {
+    console.log("[Cron] Starting scheduled league data sync...");
+    try {
+      await leagueScheduledSync();
+      await pzpnScheduledSync();
+      console.log("[Cron] League data sync completed");
+    } catch (error) {
+      console.error("[Cron] League sync error:", error);
+    }
+  }, LEAGUE_SYNC_INTERVAL);
   
   // Run initial processing
   setTimeout(async () => {

@@ -710,3 +710,10 @@
 - [x] Fogis scraping (Sweden)
 - [x] Data source configuration for all 14 countries
 - [ ] Automatic data synchronization scheduler (cron job pending)
+
+
+## Cron Job & Onboarding (Completed)
+- [x] Cron job for automatic league data sync (every 24h)
+- [x] Country selection in onboarding flow (app/onboarding/country.tsx)
+- [x] Match schedule import to calendar (matchImportService.ts)
+- [x] User country preference storage (AsyncStorage)
