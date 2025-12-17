@@ -886,9 +886,33 @@ export const appRouter = router({
         role: z.enum(["manager", "board_member", "board_member_finance", "coach", "player"]),
       }))
       .mutation(async ({ ctx, input }) => {
-        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, input.clubId);
+        const { hasAccess, permissions, role: senderRole } = await checkClubAccess(ctx.user.id, input.clubId);
         if (!hasAccess || !permissions.canInviteUsers) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień do zapraszania użytkowników" });
+        }
+        
+        // Role-based invitation restrictions
+        // Manager can invite: board_member, board_member_finance, coach, player
+        // Board members and coaches can only invite: player
+        const roleHierarchy = ["manager", "board_member", "board_member_finance", "coach", "player"];
+        const senderRoleIndex = roleHierarchy.indexOf(senderRole || "player");
+        const targetRoleIndex = roleHierarchy.indexOf(input.role);
+        
+        // Can only invite roles lower in hierarchy
+        if (targetRoleIndex <= senderRoleIndex && senderRole !== "manager") {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "Nie możesz zaprosić osoby z tą lub wyższą rolą" 
+          });
+        }
+        
+        // Board members and coaches can only invite players
+        if ((senderRole === "board_member" || senderRole === "board_member_finance" || senderRole === "coach") && 
+            input.role !== "player") {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "Możesz zaprosić tylko zawodników" 
+          });
         }
         
         // Check if invitation already exists
@@ -1062,6 +1086,37 @@ export const appRouter = router({
         // Manager cannot be changed to lower role by non-board member
         if (targetMember.role === "manager" && !permissions.canRemoveManager) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Nie możesz zmienić roli Managera" });
+        }
+        
+        // Role hierarchy restrictions - can only change roles lower than your own
+        const roleHierarchy = ["manager", "board_member", "board_member_finance", "coach", "player"];
+        const currentUserRoleIndex = roleHierarchy.indexOf(currentUserRole || "player");
+        const targetMemberRoleIndex = roleHierarchy.indexOf(targetMember.role);
+        const newRoleIndex = roleHierarchy.indexOf(input.role);
+        
+        // Cannot change role of someone at same or higher level (except manager can change anyone)
+        if (currentUserRole !== "manager" && targetMemberRoleIndex <= currentUserRoleIndex) {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "Nie możesz zmienić roli osoby na tym samym lub wyższym poziomie" 
+          });
+        }
+        
+        // Cannot assign role higher than your own (except manager)
+        if (currentUserRole !== "manager" && newRoleIndex <= currentUserRoleIndex) {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "Nie możesz przyznać roli wyższej niż Twoja" 
+          });
+        }
+        
+        // Board members and coaches can only assign player role
+        if ((currentUserRole === "board_member" || currentUserRole === "board_member_finance" || currentUserRole === "coach") && 
+            input.role !== "player") {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "Możesz przyznać tylko rolę zawodnika" 
+          });
         }
         
         await db.updateClubMember(input.memberId, { role: input.role });

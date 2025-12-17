@@ -1,0 +1,246 @@
+================================================================================
+                    SMALL CLUB MANAGER - LISTA FUNKCJI
+================================================================================
+
+Kompleksowa aplikacja do zarządzania klubem sportowym
+Wersja: 1.0.0
+Łącznie: ponad 150 funkcji
+
+================================================================================
+                         ZARZĄDZANIE KLUBEM
+================================================================================
+
+• Dashboard z przeglądem klubu i statystykami
+• Tworzenie i zarządzanie wieloma klubami
+• Struktura klubu z zaproszeniami i rolami (Admin, Trener, Zawodnik, Rodzic)
+• System uprawnień oparty na rolach
+• Backup i przywracanie danych klubu
+
+================================================================================
+                       ZARZĄDZANIE ZAWODNIKAMI
+================================================================================
+
+• Lista zawodników z wyszukiwaniem i filtrami
+• Dodawanie/edycja profilu zawodnika
+• Szczegółowy profil ze statystykami
+• System ocen zawodników (technika, zaangażowanie, postępy, współpraca)
+• Śledzenie kontuzji i statusu zdrowia
+• Osiągnięcia i odznaki (17 typów w 6 kategoriach)
+• Cele treningowe z śledzeniem postępu
+• Porównanie zawodników (radar chart)
+• Trendy rozwoju z wykresami
+• Panel zawodnika z osobistymi statystykami
+
+================================================================================
+                         MECZE I TRENINGI
+================================================================================
+
+• Lista meczów (nadchodzące/przeszłe)
+• Dodawanie/edycja meczów z szczegółami
+• Lista treningów z harmonogramem
+• Kalendarz wydarzeń z widokiem dnia
+• Tworzenie wydarzeń bezpośrednio z kalendarza
+• Powołania na mecze (wybór drużyny/zawodników)
+• Zaproszenia na treningi (kategorie wiekowe)
+• Śledzenie obecności na meczach i treningach
+• Statystyki frekwencji zawodników
+• System usprawiedliwień nieobecności
+
+================================================================================
+                       ZESPOŁY I KATEGORIE
+================================================================================
+
+• Zarządzanie zespołami (Zespoły)
+• Kategorie wiekowe
+• Przypisywanie zawodników do zespołów
+• Statystyki drużynowe z wykresami
+• Ranking klubowy z podium
+• Nagrody sezonowe (MVP, Król Strzelców, itp.)
+
+================================================================================
+                            FINANSE
+================================================================================
+
+• Przegląd finansów (przychody/wydatki)
+• Śledzenie płatności
+• Przypomnienia o płatnościach
+• Eksport raportów finansowych
+
+================================================================================
+                    SZKÓŁKA PIŁKARSKA (AKADEMIA)
+================================================================================
+
+• Zarządzanie młodzieżą
+• Grupy wiekowe
+• Płatności rodziców
+• Przypomnienia SMS o płatnościach
+
+================================================================================
+                   KOMUNIKACJA I POWIADOMIENIA
+================================================================================
+
+• System wiadomości (trener-rodzic)
+• Powiadomienia push
+• Powiadomienia SMS (Twilio, SMSAPI, SMSLabs)
+• Powiadomienia email z szablonami
+• Integracja WhatsApp Business API
+• Automatyczne przypomnienia 24h przed wydarzeniami
+• Powiadomienia o nieobecności dziecka dla rodziców
+• Segmentacja powiadomień
+• Kampanie powiadomień z harmonogramem
+
+================================================================================
+                          PANEL RODZICA
+================================================================================
+
+• Powiązanie z dziećmi w klubie
+• Harmonogram wydarzeń dziecka
+• Historia obecności
+• Status płatności
+• Ankiety i głosowania
+• Wiadomości z trenerem
+
+================================================================================
+                          PANEL TRENERA
+================================================================================
+
+• Dashboard z przeglądem drużyny
+• Statystyki frekwencji zespołu
+• Ocenianie zawodników
+• Tworzenie ankiet i głosowań
+• Wysyłanie powiadomień
+
+================================================================================
+                        GALERIA I MEDIA
+================================================================================
+
+• Albumy zdjęć z wydarzeń
+• Tagowanie zawodników na zdjęciach
+• Udostępnianie albumów (linki publiczne)
+• Publiczny widok albumu bez logowania
+• Integracja z chmurą (Google Drive, Dropbox, OneDrive)
+• Zdjęcia przechowywane na koncie użytkownika
+
+================================================================================
+                       RAPORTY I EKSPORT
+================================================================================
+
+• Raporty PDF (frekwencja, statystyki, finanse)
+• Eksport do CSV/Excel
+• Eksport podsumowania sezonu
+• Dyplomy/certyfikaty z osiągnięciami
+• Raport częstotliwości drużyny
+
+================================================================================
+                    KALENDARZ I INTEGRACJE
+================================================================================
+
+• Widok kalendarza z wydarzeniami
+• Eksport do Google Calendar
+• Eksport do Apple Calendar
+• Format ICS do subskrypcji
+• Synchronizacja dwukierunkowa
+
+================================================================================
+                       ANKIETY I OPINIE
+================================================================================
+
+• Tworzenie ankiet (głosowanie, opinia, wybór terminu)
+• Głosowanie dla rodziców
+• Wizualizacja wyników
+• Powiadomienia o nowych ankietach
+
+================================================================================
+                       TABLICA OGŁOSZEŃ
+================================================================================
+
+• Ogłoszenia klubowe
+• Priorytety (normalny, ważny, pilny)
+• Przypinanie ogłoszeń
+• Śledzenie przeczytanych
+
+================================================================================
+                       HISTORIA I AUDYT
+================================================================================
+
+• Historia zmian w harmonogramie
+• Log audytu operacji
+• Możliwość cofania zmian
+• Automatyczne logowanie modyfikacji
+
+================================================================================
+                    SUBSKRYPCJE I PŁATNOŚCI
+================================================================================
+
+• Plany PRO (miesięczny/roczny)
+• Integracja Stripe
+• Zarządzanie subskrypcjami
+• Anulowanie subskrypcji
+
+================================================================================
+                       PANEL MASTER ADMIN
+================================================================================
+
+• Zarządzanie użytkownikami
+• Przyznawanie/odbieranie PRO
+• Przegląd wszystkich klubów
+• Dashboard analityczny
+• Zarządzanie cenami subskrypcji
+• Konfiguracja Stripe
+• Zarządzanie reklamami
+• A/B testing reklam
+• Log audytu bezpieczeństwa
+• Konfiguracja 2FA
+
+================================================================================
+                        BEZPIECZEŃSTWO
+================================================================================
+
+• Szyfrowanie haseł (JWT)
+• Szyfrowanie kluczy API (AES-256-GCM)
+• SSL dla bazy danych
+• Walidacja danych (Zod)
+• Rate limiting
+• 2FA dla administratorów
+
+================================================================================
+                         TRYB OFFLINE
+================================================================================
+
+• Cachowanie danych lokalnie
+• Wskaźnik synchronizacji
+• Ustawienia offline
+• Automatyczna synchronizacja
+
+================================================================================
+                        WIELOJĘZYCZNOŚĆ
+================================================================================
+
+• Polski (PL)
+• Angielski (EN)
+• Niemiecki (DE)
+
+================================================================================
+                       PWA I MOBILNOŚĆ
+================================================================================
+
+• Instalacja jako PWA
+• Service worker dla offline
+• Push notifications
+• Responsywny design
+
+================================================================================
+                     REKLAMY I SPONSORZY
+================================================================================
+
+• Bannery reklamowe
+• Statystyki reklam
+• ROI dashboard
+• Powiadomienia sponsorskie
+
+================================================================================
+
+                    © 2024 Small Club Manager
+                  Kompleksowe zarządzanie klubem sportowym
+
+================================================================================

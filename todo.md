@@ -475,3 +475,14 @@
 - [x] Respect sharing settings (download, expiration)
 - [x] Mobile-optimized gallery with lightbox viewer
 - [x] Navigation arrows and photo counter
+
+
+## Enhanced Invitation & Permission System (Completed)
+- [x] Manager permissions panel with member search (manager-permissions.tsx)
+- [x] Role hierarchy: Manager > Board > Coach > Player
+- [x] Board members and coaches can only invite players
+- [x] Manager can change any member's permissions
+- [x] Search members by name, email, role
+- [x] Grant/revoke permissions from manager panel
+- [x] Invitation restrictions based on sender's role (routers.ts)
+- [x] Role change restrictions based on hierarchy (routers.ts)

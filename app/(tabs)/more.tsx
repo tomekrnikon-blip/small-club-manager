@@ -298,6 +298,11 @@ export default function MoreScreen() {
             onPress={() => router.push("/cloud-storage-settings" as any)}
           />
           <MenuItem
+            icon="admin-panel-settings"
+            label="Zarządzanie uprawnieniami"
+            onPress={() => router.push("/manager-permissions" as any)}
+          />
+          <MenuItem
             icon="person"
             label="Panel rodzica"
             onPress={() => router.push("/parent-panel" as any)}
