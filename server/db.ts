@@ -10,6 +10,7 @@ import {
   InsertPlayerStat, playerStats,
   InsertMatch, matches,
   InsertMatchStat, matchStats,
+  InsertMatchEvent, matchEvents,
   InsertMatchCallup, matchCallups,
   InsertTraining, trainings,
   InsertTrainingAttendance, trainingAttendance,
@@ -32,6 +33,9 @@ import {
   InsertSurveyOption, surveyOptions,
   InsertSurveyVote, surveyVotes,
   InsertChangeHistory, changeHistory,
+  InsertPlayerAchievement, playerAchievements,
+  InsertSocialMediaConnection, socialMediaConnections,
+  InsertSocialMediaPost, socialMediaPosts,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -351,6 +355,28 @@ export async function deleteMatchStats(matchId: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(matchStats).where(eq(matchStats.matchId, matchId));
+}
+
+// ============================================
+// MATCH EVENTS FUNCTIONS
+// ============================================
+export async function createMatchEvent(data: InsertMatchEvent) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(matchEvents).values(data);
+  return result[0].insertId;
+}
+
+export async function getMatchEvents(matchId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(matchEvents).where(eq(matchEvents.matchId, matchId)).orderBy(matchEvents.minute);
+}
+
+export async function deleteMatchEvent(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(matchEvents).where(eq(matchEvents.id, id));
 }
 
 // ============================================
@@ -1560,4 +1586,100 @@ export async function updatePlayerSeasonStats(playerId: number, stats: {
       goalsConceded: stats.goalsConceded,
     });
   }
+}
+
+
+// ============================================
+// PLAYER ACHIEVEMENTS FUNCTIONS
+// ============================================
+export async function getPlayerAchievements(playerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(playerAchievements).where(eq(playerAchievements.playerId, playerId));
+}
+
+export async function createPlayerAchievementRecord(data: { playerId: number; achievementId: number; currentValue?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(playerAchievements).values({
+    playerId: data.playerId,
+    achievementId: data.achievementId,
+    currentValue: data.currentValue || 0,
+    notified: false,
+  });
+  return result[0].insertId;
+}
+
+export async function markAchievementNotified(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(playerAchievements).set({ notified: true }).where(eq(playerAchievements.id, id));
+}
+
+// ============================================
+// PLAYER STATS AGGREGATE FUNCTIONS
+// ============================================
+export async function getPlayerStatsAggregate(playerId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  // Get season stats
+  const stats = await db.select().from(playerStats).where(eq(playerStats.playerId, playerId));
+  
+  if (stats.length === 0) return null;
+  
+  // Aggregate all seasons
+  const aggregate = stats.reduce((acc, s) => ({
+    goals: acc.goals + (s.goals || 0),
+    assists: acc.assists + (s.assists || 0),
+    minutesPlayed: acc.minutesPlayed + (s.minutesPlayed || 0),
+    cleanSheets: acc.cleanSheets + (s.cleanSheets || 0),
+    saves: acc.saves + (s.saves || 0),
+    yellowCards: acc.yellowCards + (s.yellowCards || 0),
+    redCards: acc.redCards + (s.redCards || 0),
+  }), {
+    goals: 0,
+    assists: 0,
+    minutesPlayed: 0,
+    cleanSheets: 0,
+    saves: 0,
+    yellowCards: 0,
+    redCards: 0,
+  });
+  
+  // Get attendance count from training attendance
+  const attendance = await db.select().from(trainingAttendance).where(
+    and(
+      eq(trainingAttendance.playerId, playerId),
+      eq(trainingAttendance.attended, 1)
+    )
+  );
+  
+  // Get average rating from player ratings
+  const ratings = await db.select().from(playerRatings).where(eq(playerRatings.playerId, playerId));
+  const avgRating = ratings.length > 0 
+    ? ratings.reduce((sum, r) => sum + (parseFloat(r.overall as string) || 0), 0) / ratings.length 
+    : 0;
+  
+  return {
+    ...aggregate,
+    attendance: attendance.length,
+    averageRating: avgRating,
+  };
+}
+
+// ============================================
+// USER BY PLAYER FUNCTIONS
+// ============================================
+export async function getUserByPlayerId(playerId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  // Find club member linked to this player
+  const player = await getPlayerById(playerId);
+  if (!player || !player.email) return null;
+  
+  // Find user by email
+  const result = await db.select().from(users).where(eq(users.email, player.email)).limit(1);
+  return result[0] || null;
 }

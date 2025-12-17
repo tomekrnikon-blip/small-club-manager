@@ -371,7 +371,7 @@ export const notifications = mysqlTable("notifications", {
   id: int("id").autoincrement().primaryKey(),
   clubId: int("clubId").notNull(),
   userId: int("userId"),
-  type: mysqlEnum("type", ["match", "training", "payment", "callup", "general"]).notNull(),
+  type: mysqlEnum("type", ["match", "training", "payment", "callup", "general", "achievement"]).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message"),
   isRead: boolean("isRead").default(false).notNull(),
@@ -1002,4 +1002,182 @@ export const photoTagsRelations = relations(photoTags, ({ one }) => ({
   photo: one(photos, { fields: [photoTags.photoId], references: [photos.id] }),
   player: one(players, { fields: [photoTags.playerId], references: [players.id] }),
   tagger: one(users, { fields: [photoTags.taggedBy], references: [users.id] }),
+}));
+
+
+/**
+ * Match events - live match events timeline
+ */
+export const matchEvents = mysqlTable("matchEvents", {
+  id: int("id").autoincrement().primaryKey(),
+  matchId: int("matchId").notNull(),
+  playerId: int("playerId"),
+  assistPlayerId: int("assistPlayerId"),
+  eventType: mysqlEnum("eventType", ["goal", "assist", "yellow_card", "red_card", "substitution_in", "substitution_out", "save", "injury"]).notNull(),
+  minute: int("minute").notNull(),
+  half: mysqlEnum("half", ["first", "second", "extra_first", "extra_second", "penalties"]).default("first").notNull(),
+  description: varchar("description", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MatchEvent = typeof matchEvents.$inferSelect;
+export type InsertMatchEvent = typeof matchEvents.$inferInsert;
+
+export const matchEventsRelations = relations(matchEvents, ({ one }) => ({
+  match: one(matches, { fields: [matchEvents.matchId], references: [matches.id] }),
+  player: one(players, { fields: [matchEvents.playerId], references: [players.id] }),
+  assistPlayer: one(players, { fields: [matchEvents.assistPlayerId], references: [players.id] }),
+}));
+
+
+
+/**
+ * Social media connections - Facebook/Instagram integration
+ */
+export const socialMediaConnections = mysqlTable("socialMediaConnections", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  platform: mysqlEnum("platform", ["facebook", "instagram"]).notNull(),
+  accessToken: text("accessToken").notNull(),
+  pageId: varchar("pageId", { length: 100 }),
+  accountId: varchar("accountId", { length: 100 }),
+  pageName: varchar("pageName", { length: 255 }),
+  username: varchar("username", { length: 100 }),
+  expiresAt: timestamp("expiresAt"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SocialMediaConnection = typeof socialMediaConnections.$inferSelect;
+export type InsertSocialMediaConnection = typeof socialMediaConnections.$inferInsert;
+
+export const socialMediaConnectionsRelations = relations(socialMediaConnections, ({ one }) => ({
+  club: one(clubs, { fields: [socialMediaConnections.clubId], references: [clubs.id] }),
+}));
+
+
+/**
+ * Social media posts - scheduled and published posts
+ */
+export const socialMediaPosts = mysqlTable("socialMediaPosts", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  connectionId: int("connectionId").notNull(),
+  contentType: mysqlEnum("contentType", ["match_preview", "match_result", "match_stats", "player_highlight", "custom"]).notNull(),
+  referenceType: mysqlEnum("referenceType", ["match", "player", "training", "custom"]),
+  referenceId: int("referenceId"),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  imageUrl: varchar("imageUrl", { length: 500 }),
+  hashtags: varchar("hashtags", { length: 500 }),
+  status: mysqlEnum("status", ["draft", "scheduled", "published", "failed"]).default("draft").notNull(),
+  scheduledFor: timestamp("scheduledFor"),
+  publishedAt: timestamp("publishedAt"),
+  externalPostId: varchar("externalPostId", { length: 100 }),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SocialMediaPost = typeof socialMediaPosts.$inferSelect;
+export type InsertSocialMediaPost = typeof socialMediaPosts.$inferInsert;
+
+export const socialMediaPostsRelations = relations(socialMediaPosts, ({ one }) => ({
+  club: one(clubs, { fields: [socialMediaPosts.clubId], references: [clubs.id] }),
+  connection: one(socialMediaConnections, { fields: [socialMediaPosts.connectionId], references: [socialMediaConnections.id] }),
+}));
+
+
+
+/**
+ * PZPN Regions - Regional football associations
+ */
+export const pzpnRegions = mysqlTable("pzpnRegions", {
+  id: int("id").autoincrement().primaryKey(),
+  code: varchar("code", { length: 10 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  website: varchar("website", { length: 255 }),
+  scrapingEnabled: boolean("scrapingEnabled").default(false).notNull(),
+  lastSyncedAt: timestamp("lastSyncedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PzpnRegion = typeof pzpnRegions.$inferSelect;
+export type InsertPzpnRegion = typeof pzpnRegions.$inferInsert;
+
+
+/**
+ * PZPN Leagues - Leagues within regions
+ */
+export const pzpnLeagues = mysqlTable("pzpnLeagues", {
+  id: int("id").autoincrement().primaryKey(),
+  regionId: int("regionId").notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  level: int("level").notNull(), // 4 = IV liga, 5 = V liga, etc.
+  season: varchar("season", { length: 20 }).notNull(),
+  groupName: varchar("groupName", { length: 50 }),
+  externalId: varchar("externalId", { length: 100 }),
+  lastSyncedAt: timestamp("lastSyncedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PzpnLeague = typeof pzpnLeagues.$inferSelect;
+export type InsertPzpnLeague = typeof pzpnLeagues.$inferInsert;
+
+export const pzpnLeaguesRelations = relations(pzpnLeagues, ({ one }) => ({
+  region: one(pzpnRegions, { fields: [pzpnLeagues.regionId], references: [pzpnRegions.id] }),
+}));
+
+
+/**
+ * PZPN Teams - Teams from official PZPN data
+ */
+export const pzpnTeams = mysqlTable("pzpnTeams", {
+  id: int("id").autoincrement().primaryKey(),
+  leagueId: int("leagueId").notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  externalId: varchar("externalId", { length: 100 }),
+  position: int("position"),
+  matches: int("matches").default(0),
+  points: int("points").default(0),
+  wins: int("wins").default(0),
+  draws: int("draws").default(0),
+  losses: int("losses").default(0),
+  goalsFor: int("goalsFor").default(0),
+  goalsAgainst: int("goalsAgainst").default(0),
+  goalDifference: int("goalDifference").default(0),
+  lastSyncedAt: timestamp("lastSyncedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PzpnTeam = typeof pzpnTeams.$inferSelect;
+export type InsertPzpnTeam = typeof pzpnTeams.$inferInsert;
+
+export const pzpnTeamsRelations = relations(pzpnTeams, ({ one }) => ({
+  league: one(pzpnLeagues, { fields: [pzpnTeams.leagueId], references: [pzpnLeagues.id] }),
+}));
+
+
+/**
+ * Club PZPN Links - Links clubs to official PZPN teams
+ */
+export const clubPzpnLinks = mysqlTable("clubPzpnLinks", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  pzpnTeamId: int("pzpnTeamId").notNull(),
+  verified: boolean("verified").default(false).notNull(),
+  verifiedAt: timestamp("verifiedAt"),
+  verifiedBy: int("verifiedBy"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ClubPzpnLink = typeof clubPzpnLinks.$inferSelect;
+export type InsertClubPzpnLink = typeof clubPzpnLinks.$inferInsert;
+
+export const clubPzpnLinksRelations = relations(clubPzpnLinks, ({ one }) => ({
+  club: one(clubs, { fields: [clubPzpnLinks.clubId], references: [clubs.id] }),
+  pzpnTeam: one(pzpnTeams, { fields: [clubPzpnLinks.pzpnTeamId], references: [pzpnTeams.id] }),
+  verifier: one(users, { fields: [clubPzpnLinks.verifiedBy], references: [users.id] }),
 }));

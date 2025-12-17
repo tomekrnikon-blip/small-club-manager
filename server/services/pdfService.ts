@@ -1177,3 +1177,524 @@ export function generateSeasonSummaryCsv(data: SeasonSummaryData): string {
   
   return csv;
 }
+
+
+/**
+ * Match Report Data Interface
+ */
+export interface MatchReportData {
+  match: {
+    id: number;
+    opponent: string;
+    date: string;
+    time?: string;
+    location?: string;
+    homeAway: 'home' | 'away';
+    goalsScored: number;
+    goalsConceded: number;
+    result: 'win' | 'draw' | 'loss' | null;
+  };
+  clubName: string;
+  teamName?: string;
+  events: {
+    minute: number;
+    type: string;
+    playerName: string;
+    assistPlayerName?: string;
+    half: string;
+  }[];
+  playerStats: {
+    name: string;
+    position: string;
+    minutesPlayed: number;
+    goals: number;
+    assists: number;
+    yellowCards: number;
+    redCards: number;
+    saves: number;
+  }[];
+  summary: {
+    totalGoals: number;
+    totalAssists: number;
+    totalYellowCards: number;
+    totalRedCards: number;
+    totalSaves: number;
+    possession?: number;
+    shots?: number;
+    shotsOnTarget?: number;
+  };
+}
+
+/**
+ * Generate match report data
+ */
+export async function generateMatchReportData(matchId: number): Promise<MatchReportData | null> {
+  const match = await db.getMatchById(matchId);
+  if (!match) return null;
+
+  const club = await db.getClubById(match.clubId);
+  const team = match.teamId ? await db.getTeamById(match.teamId) : null;
+  const events = await db.getMatchEvents(matchId);
+  const stats = await db.getMatchStats(matchId);
+  const players = await db.getPlayersByClubId(match.clubId);
+
+  // Map player IDs to names
+  const playerMap = new Map(players.map(p => [p.id, p]));
+
+  // Format events
+  const formattedEvents = events.map((e: any) => ({
+    minute: e.minute,
+    type: e.eventType,
+    playerName: playerMap.get(e.playerId)?.name || 'Nieznany',
+    assistPlayerName: e.assistPlayerId ? playerMap.get(e.assistPlayerId)?.name : undefined,
+    half: e.half === 'first' ? '1. połowa' : e.half === 'second' ? '2. połowa' : e.half,
+  }));
+
+  // Format player stats
+  const formattedStats = stats.map((s: any) => {
+    const player = playerMap.get(s.playerId);
+    return {
+      name: player?.name || 'Nieznany',
+      position: player?.position || '-',
+      minutesPlayed: s.minutesPlayed || 0,
+      goals: s.goals || 0,
+      assists: s.assists || 0,
+      yellowCards: s.yellowCards || 0,
+      redCards: s.redCards || 0,
+      saves: s.saves || 0,
+    };
+  });
+
+  // Calculate summary
+  const summary = {
+    totalGoals: formattedStats.reduce((sum, s) => sum + s.goals, 0),
+    totalAssists: formattedStats.reduce((sum, s) => sum + s.assists, 0),
+    totalYellowCards: formattedStats.reduce((sum, s) => sum + s.yellowCards, 0),
+    totalRedCards: formattedStats.reduce((sum, s) => sum + s.redCards, 0),
+    totalSaves: formattedStats.reduce((sum, s) => sum + s.saves, 0),
+  };
+
+  return {
+    match: {
+      id: match.id,
+      opponent: match.opponent,
+      date: new Date(match.matchDate).toLocaleDateString('pl-PL', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }),
+      time: match.matchTime || undefined,
+      location: match.location || undefined,
+      homeAway: match.homeAway,
+      goalsScored: match.goalsScored,
+      goalsConceded: match.goalsConceded,
+      result: match.result,
+    },
+    clubName: club?.name || 'Klub',
+    teamName: team?.name,
+    events: formattedEvents,
+    playerStats: formattedStats,
+    summary,
+  };
+}
+
+/**
+ * Generate match report HTML
+ */
+export function generateMatchReportHtml(data: MatchReportData): string {
+  const resultColor = data.match.result === 'win' ? '#22c55e' : 
+                      data.match.result === 'loss' ? '#ef4444' : '#f59e0b';
+  const resultText = data.match.result === 'win' ? 'WYGRANA' : 
+                     data.match.result === 'loss' ? 'PRZEGRANA' : 'REMIS';
+
+  const homeTeam = data.match.homeAway === 'home' ? data.clubName : data.match.opponent;
+  const awayTeam = data.match.homeAway === 'away' ? data.clubName : data.match.opponent;
+  const homeScore = data.match.homeAway === 'home' ? data.match.goalsScored : data.match.goalsConceded;
+  const awayScore = data.match.homeAway === 'away' ? data.match.goalsScored : data.match.goalsConceded;
+
+  const eventTypeIcons: Record<string, string> = {
+    goal: '⚽',
+    assist: '🎯',
+    yellow_card: '🟨',
+    red_card: '🟥',
+    substitution_in: '🔼',
+    substitution_out: '🔽',
+    save: '🧤',
+    injury: '🏥',
+  };
+
+  const eventTypeLabels: Record<string, string> = {
+    goal: 'Bramka',
+    assist: 'Asysta',
+    yellow_card: 'Żółta kartka',
+    red_card: 'Czerwona kartka',
+    substitution_in: 'Wejście',
+    substitution_out: 'Zejście',
+    save: 'Obrona',
+    injury: 'Kontuzja',
+  };
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      background: #0f172a; 
+      color: #e2e8f0;
+      padding: 40px;
+    }
+    .container { max-width: 800px; margin: 0 auto; }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      color: #22c55e;
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .header .meta {
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    
+    .scoreboard {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .scoreboard .teams {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .scoreboard .team {
+      flex: 1;
+      text-align: center;
+    }
+    .scoreboard .team-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+    .scoreboard .score-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+    .scoreboard .score {
+      font-size: 64px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .scoreboard .vs {
+      font-size: 24px;
+      color: #64748b;
+    }
+    .scoreboard .result-badge {
+      display: inline-block;
+      padding: 8px 24px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+      background: ${resultColor}20;
+      color: ${resultColor};
+      margin-top: 15px;
+    }
+    .scoreboard .match-info {
+      margin-top: 15px;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    
+    .section {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      color: #22c55e;
+      font-size: 18px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #334155;
+    }
+    
+    .timeline {
+      position: relative;
+      padding-left: 30px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #334155;
+    }
+    .timeline-item {
+      position: relative;
+      padding: 12px 0;
+      border-bottom: 1px solid #334155;
+    }
+    .timeline-item:last-child {
+      border-bottom: none;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -24px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 10px;
+      height: 10px;
+      background: #22c55e;
+      border-radius: 50%;
+    }
+    .timeline-minute {
+      display: inline-block;
+      width: 40px;
+      font-weight: 700;
+      color: #f59e0b;
+    }
+    .timeline-icon {
+      margin-right: 8px;
+    }
+    .timeline-player {
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+    .timeline-type {
+      color: #94a3b8;
+      font-size: 13px;
+      margin-left: 8px;
+    }
+    .timeline-assist {
+      color: #64748b;
+      font-size: 12px;
+      margin-left: 48px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      background: #334155;
+      color: #f1f5f9;
+      padding: 12px;
+      text-align: left;
+      font-size: 13px;
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #334155;
+      font-size: 14px;
+    }
+    tr:hover {
+      background: #334155;
+    }
+    .stat-highlight {
+      color: #22c55e;
+      font-weight: 600;
+    }
+    
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 15px;
+      text-align: center;
+    }
+    .summary-item {
+      background: #0f172a;
+      padding: 16px;
+      border-radius: 8px;
+    }
+    .summary-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #22c55e;
+    }
+    .summary-label {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    
+    .footer {
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #334155;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Raport meczowy</h1>
+      <div class="meta">${data.teamName ? data.teamName + ' | ' : ''}${data.clubName}</div>
+    </div>
+    
+    <div class="scoreboard">
+      <div class="teams">
+        <div class="team">
+          <div class="team-name">${homeTeam}</div>
+        </div>
+        <div class="score-container">
+          <div class="score">${homeScore}</div>
+          <div class="vs">:</div>
+          <div class="score">${awayScore}</div>
+        </div>
+        <div class="team">
+          <div class="team-name">${awayTeam}</div>
+        </div>
+      </div>
+      <div class="result-badge">${resultText}</div>
+      <div class="match-info">
+        ${data.match.date}${data.match.time ? ' | ' + data.match.time : ''}${data.match.location ? ' | ' + data.match.location : ''}
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Podsumowanie</h2>
+      <div class="summary-grid">
+        <div class="summary-item">
+          <div class="summary-value">${data.summary.totalGoals}</div>
+          <div class="summary-label">Bramki</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value">${data.summary.totalAssists}</div>
+          <div class="summary-label">Asysty</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value">${data.summary.totalYellowCards}</div>
+          <div class="summary-label">Żółte kartki</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value">${data.summary.totalRedCards}</div>
+          <div class="summary-label">Czerwone kartki</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-value">${data.summary.totalSaves}</div>
+          <div class="summary-label">Obrony</div>
+        </div>
+      </div>
+    </div>
+    
+    ${data.events.length > 0 ? `
+    <div class="section">
+      <h2>Oś czasu meczu</h2>
+      <div class="timeline">
+        ${data.events.map(e => `
+          <div class="timeline-item">
+            <span class="timeline-minute">${e.minute}'</span>
+            <span class="timeline-icon">${eventTypeIcons[e.type] || '📝'}</span>
+            <span class="timeline-player">${e.playerName}</span>
+            <span class="timeline-type">${eventTypeLabels[e.type] || e.type}</span>
+            ${e.assistPlayerName ? `<div class="timeline-assist">Asysta: ${e.assistPlayerName}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
+    
+    ${data.playerStats.length > 0 ? `
+    <div class="section">
+      <h2>Statystyki zawodników</h2>
+      <table>
+        <tr>
+          <th>Zawodnik</th>
+          <th>Pozycja</th>
+          <th>Minuty</th>
+          <th>Gole</th>
+          <th>Asysty</th>
+          <th>Żółte</th>
+          <th>Czerwone</th>
+          <th>Obrony</th>
+        </tr>
+        ${data.playerStats.map(s => `
+          <tr>
+            <td>${s.name}</td>
+            <td>${s.position}</td>
+            <td>${s.minutesPlayed}</td>
+            <td class="${s.goals > 0 ? 'stat-highlight' : ''}">${s.goals}</td>
+            <td class="${s.assists > 0 ? 'stat-highlight' : ''}">${s.assists}</td>
+            <td>${s.yellowCards}</td>
+            <td>${s.redCards}</td>
+            <td>${s.saves}</td>
+          </tr>
+        `).join('')}
+      </table>
+    </div>
+    ` : ''}
+    
+    <div class="footer">
+      Raport wygenerowany: ${new Date().toLocaleString('pl-PL')} | Small Club Manager
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+/**
+ * Generate match report CSV
+ */
+export function generateMatchReportCsv(data: MatchReportData): string {
+  let csv = '';
+  
+  csv += `"RAPORT MECZOWY"\n`;
+  csv += `"Klub","${data.clubName}"\n`;
+  if (data.teamName) csv += `"Drużyna","${data.teamName}"\n`;
+  csv += `\n`;
+  
+  csv += `"WYNIK"\n`;
+  csv += `"Przeciwnik","${data.match.opponent}"\n`;
+  csv += `"Data","${data.match.date}"\n`;
+  csv += `"Wynik","${data.match.goalsScored}:${data.match.goalsConceded}"\n`;
+  csv += `"Rezultat","${data.match.result === 'win' ? 'Wygrana' : data.match.result === 'loss' ? 'Przegrana' : 'Remis'}"\n`;
+  csv += `\n`;
+  
+  csv += `"PODSUMOWANIE"\n`;
+  csv += `"Bramki","${data.summary.totalGoals}"\n`;
+  csv += `"Asysty","${data.summary.totalAssists}"\n`;
+  csv += `"Żółte kartki","${data.summary.totalYellowCards}"\n`;
+  csv += `"Czerwone kartki","${data.summary.totalRedCards}"\n`;
+  csv += `"Obrony","${data.summary.totalSaves}"\n`;
+  csv += `\n`;
+  
+  if (data.events.length > 0) {
+    csv += `"WYDARZENIA"\n`;
+    csv += `"Minuta","Typ","Zawodnik","Asysta"\n`;
+    data.events.forEach(e => {
+      csv += `"${e.minute}'","${e.type}","${e.playerName}","${e.assistPlayerName || ''}"\n`;
+    });
+    csv += `\n`;
+  }
+  
+  if (data.playerStats.length > 0) {
+    csv += `"STATYSTYKI ZAWODNIKÓW"\n`;
+    csv += `"Zawodnik","Pozycja","Minuty","Gole","Asysty","Żółte","Czerwone","Obrony"\n`;
+    data.playerStats.forEach(s => {
+      csv += `"${s.name}","${s.position}","${s.minutesPlayed}","${s.goals}","${s.assists}","${s.yellowCards}","${s.redCards}","${s.saves}"\n`;
+    });
+  }
+  
+  return csv;
+}

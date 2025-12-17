@@ -6,6 +6,7 @@ import {
   Pressable,
   Alert,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -14,30 +15,38 @@ import { ThemedView } from "@/components/themed-view";
 import { trpc } from "@/lib/trpc";
 import * as Haptics from "expo-haptics";
 
+type EventType = "goal" | "assist" | "yellow_card" | "red_card" | "substitution_in" | "substitution_out" | "save" | "injury";
+type HalfType = "first" | "second" | "extra_first" | "extra_second" | "penalties";
+
 type MatchEvent = {
-  id: string;
-  type: "goal" | "assist" | "yellow" | "red" | "sub_in" | "sub_out" | "save";
+  id: number;
+  type: EventType;
   playerId: number;
   playerName: string;
   minute: number;
-  half: 1 | 2;
+  half: HalfType;
+  assistPlayerId?: number;
+  assistPlayerName?: string;
 };
 
 export default function LiveMatchScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
+  const utils = trpc.useUtils();
   
   // Timer state
   const [isRunning, setIsRunning] = useState(false);
   const [seconds, setSeconds] = useState(0);
-  const [half, setHalf] = useState<1 | 2>(1);
+  const [half, setHalf] = useState<HalfType>("first");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Events state
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
-  const [pendingEventType, setPendingEventType] = useState<MatchEvent["type"] | null>(null);
+  const [pendingEventType, setPendingEventType] = useState<EventType | null>(null);
+  const [showAssistModal, setShowAssistModal] = useState(false);
+  const [pendingGoalEvent, setPendingGoalEvent] = useState<{ playerId: number; playerName: string } | null>(null);
   
   // Score
   const [homeScore, setHomeScore] = useState(0);
@@ -46,10 +55,61 @@ export default function LiveMatchScreen() {
   const { data: clubs } = trpc.clubs.list.useQuery();
   const clubId = clubs?.[0]?.id;
   
+  const { data: match } = trpc.matches.get.useQuery(
+    { id: parseInt(matchId || "0") },
+    { enabled: !!matchId }
+  );
+  
   const { data: players } = trpc.players.list.useQuery(
     { clubId: clubId! },
     { enabled: !!clubId }
   );
+  
+  // Load existing events from database
+  const { data: existingEvents, isLoading: loadingEvents } = trpc.matches.getEvents.useQuery(
+    { matchId: parseInt(matchId || "0") },
+    { enabled: !!matchId }
+  );
+  
+  // Mutations for database operations
+  const addEventMutation = trpc.matches.addEvent.useMutation({
+    onSuccess: () => {
+      utils.matches.getEvents.invalidate({ matchId: parseInt(matchId || "0") });
+    },
+  });
+  
+  const updateMatchMutation = trpc.matches.update.useMutation();
+  
+  // Initialize from existing events
+  useEffect(() => {
+    if (existingEvents && players) {
+      const mappedEvents: MatchEvent[] = existingEvents.map((e: any) => {
+        const player = players.find(p => p.id === e.playerId);
+        const assistPlayer = e.assistPlayerId ? players.find(p => p.id === e.assistPlayerId) : null;
+        return {
+          id: e.id,
+          type: e.eventType as EventType,
+          playerId: e.playerId || 0,
+          playerName: player?.name || "Nieznany",
+          minute: e.minute,
+          half: e.half as HalfType,
+          assistPlayerId: e.assistPlayerId,
+          assistPlayerName: assistPlayer?.name,
+        };
+      });
+      setEvents(mappedEvents);
+      
+      // Calculate score from events
+      const goals = mappedEvents.filter(e => e.type === "goal").length;
+      setHomeScore(goals);
+    }
+    
+    // Initialize score from match data
+    if (match) {
+      setHomeScore(match.goalsScored || 0);
+      setAwayScore(match.goalsConceded || 0);
+    }
+  }, [existingEvents, players, match]);
   
   // Timer logic
   useEffect(() => {
@@ -72,7 +132,7 @@ export default function LiveMatchScreen() {
   };
   
   const getCurrentMinute = () => {
-    const baseMinute = half === 1 ? 0 : 45;
+    const baseMinute = half === "first" ? 0 : half === "second" ? 45 : 90;
     return baseMinute + Math.floor(seconds / 60) + 1;
   };
   
@@ -90,7 +150,7 @@ export default function LiveMatchScreen() {
         {
           text: "Rozpocznij",
           onPress: () => {
-            setHalf(2);
+            setHalf("second");
             setSeconds(0);
             setIsRunning(true);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -109,10 +169,23 @@ export default function LiveMatchScreen() {
         {
           text: "Zakończ",
           style: "destructive",
-          onPress: () => {
+          onPress: async () => {
             setIsRunning(false);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            Alert.alert("Mecz zakończony", "Statystyki zostały zapisane.");
+            
+            // Save final score to database
+            if (matchId) {
+              try {
+                await updateMatchMutation.mutateAsync({
+                  id: parseInt(matchId),
+                  goalsScored: homeScore,
+                  goalsConceded: awayScore,
+                });
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert("Mecz zakończony", "Statystyki zostały zapisane do bazy danych.");
+              } catch (error) {
+                Alert.alert("Błąd", "Nie udało się zapisać wyniku meczu.");
+              }
+            }
             router.back();
           },
         },
@@ -120,69 +193,151 @@ export default function LiveMatchScreen() {
     );
   };
   
-  const addEvent = (type: MatchEvent["type"]) => {
+  const addEvent = (type: EventType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPendingEventType(type);
     setShowPlayerModal(true);
   };
   
-  const confirmEvent = (playerId: number, playerName: string) => {
-    if (!pendingEventType) return;
+  const confirmEvent = async (playerId: number, playerName: string) => {
+    if (!pendingEventType || !matchId) return;
     
-    const newEvent: MatchEvent = {
-      id: Date.now().toString(),
-      type: pendingEventType,
-      playerId,
-      playerName,
-      minute: getCurrentMinute(),
-      half,
-    };
-    
-    setEvents(prev => [newEvent, ...prev]);
-    
-    // Update score for goals
+    // For goals, ask for assist
     if (pendingEventType === "goal") {
-      setHomeScore(prev => prev + 1);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPendingGoalEvent({ playerId, playerName });
+      setShowPlayerModal(false);
+      setShowAssistModal(true);
+      return;
     }
     
-    setShowPlayerModal(false);
-    setPendingEventType(null);
+    await saveEventToDatabase(pendingEventType, playerId, playerName);
   };
   
-  const removeEvent = (eventId: string) => {
-    const event = events.find(e => e.id === eventId);
-    if (event?.type === "goal") {
-      setHomeScore(prev => Math.max(0, prev - 1));
+  const confirmGoalWithAssist = async (assistPlayerId?: number, assistPlayerName?: string) => {
+    if (!pendingGoalEvent || !matchId) return;
+    
+    await saveEventToDatabase(
+      "goal",
+      pendingGoalEvent.playerId,
+      pendingGoalEvent.playerName,
+      assistPlayerId,
+      assistPlayerName
+    );
+    
+    // Also save assist event if provided
+    if (assistPlayerId && assistPlayerName) {
+      await saveEventToDatabase(
+        "assist",
+        assistPlayerId,
+        assistPlayerName
+      );
     }
-    setEvents(prev => prev.filter(e => e.id !== eventId));
+    
+    setShowAssistModal(false);
+    setPendingGoalEvent(null);
   };
   
-  const getEventIcon = (type: MatchEvent["type"]) => {
+  const saveEventToDatabase = async (
+    type: EventType,
+    playerId: number,
+    playerName: string,
+    assistPlayerId?: number,
+    assistPlayerName?: string
+  ) => {
+    const minute = getCurrentMinute();
+    
+    try {
+      const result = await addEventMutation.mutateAsync({
+        matchId: parseInt(matchId!),
+        playerId,
+        assistPlayerId,
+        eventType: type,
+        minute,
+        half,
+      });
+      
+      const newEvent: MatchEvent = {
+        id: result.id,
+        type,
+        playerId,
+        playerName,
+        minute,
+        half,
+        assistPlayerId,
+        assistPlayerName,
+      };
+      
+      setEvents(prev => [newEvent, ...prev]);
+      
+      // Update score for goals
+      if (type === "goal") {
+        const newScore = homeScore + 1;
+        setHomeScore(newScore);
+        
+        // Update match score in database
+        await updateMatchMutation.mutateAsync({
+          id: parseInt(matchId!),
+          goalsScored: newScore,
+        });
+        
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      
+      setShowPlayerModal(false);
+      setPendingEventType(null);
+      
+    } catch (error) {
+      Alert.alert("Błąd", "Nie udało się zapisać wydarzenia.");
+    }
+  };
+  
+  const getEventIcon = (type: EventType) => {
     switch (type) {
       case "goal": return "⚽";
       case "assist": return "🎯";
-      case "yellow": return "🟨";
-      case "red": return "🟥";
-      case "sub_in": return "🔼";
-      case "sub_out": return "🔽";
+      case "yellow_card": return "🟨";
+      case "red_card": return "🟥";
+      case "substitution_in": return "🔼";
+      case "substitution_out": return "🔽";
       case "save": return "🧤";
+      case "injury": return "🏥";
       default: return "📝";
     }
   };
   
-  const getEventLabel = (type: MatchEvent["type"]) => {
+  const getEventLabel = (type: EventType) => {
     switch (type) {
       case "goal": return "Bramka";
       case "assist": return "Asysta";
-      case "yellow": return "Żółta kartka";
-      case "red": return "Czerwona kartka";
-      case "sub_in": return "Wejście";
-      case "sub_out": return "Zejście";
+      case "yellow_card": return "Żółta kartka";
+      case "red_card": return "Czerwona kartka";
+      case "substitution_in": return "Wejście";
+      case "substitution_out": return "Zejście";
       case "save": return "Obrona";
+      case "injury": return "Kontuzja";
       default: return type;
     }
   };
+  
+  const getHalfLabel = (h: HalfType) => {
+    switch (h) {
+      case "first": return "1. połowa";
+      case "second": return "2. połowa";
+      case "extra_first": return "Dogrywka 1";
+      case "extra_second": return "Dogrywka 2";
+      case "penalties": return "Karne";
+      default: return h;
+    }
+  };
+  
+  if (loadingEvents) {
+    return (
+      <ThemedView style={[styles.container, { paddingTop: insets.top, justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color="#4ade80" />
+        <ThemedText style={{ marginTop: 16 }}>Ładowanie danych meczu...</ThemedText>
+      </ThemedView>
+    );
+  }
   
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -201,17 +356,13 @@ export default function LiveMatchScreen() {
           <ThemedText style={styles.score}>{homeScore}</ThemedText>
         </View>
         <View style={styles.timerContainer}>
-          <ThemedText style={styles.halfText}>
-            {half === 1 ? "1. połowa" : "2. połowa"}
-          </ThemedText>
+          <ThemedText style={styles.halfText}>{getHalfLabel(half)}</ThemedText>
           <ThemedText style={styles.timer}>{formatTime(seconds)}</ThemedText>
           <ThemedText style={styles.minute}>{getCurrentMinute()}'</ThemedText>
         </View>
         <View style={styles.teamScore}>
-          <ThemedText style={styles.teamName}>Przeciwnik</ThemedText>
-          <Pressable onPress={() => setAwayScore(prev => prev + 1)}>
-            <ThemedText style={styles.score}>{awayScore}</ThemedText>
-          </Pressable>
+          <ThemedText style={styles.teamName}>{match?.opponent || "Przeciwnik"}</ThemedText>
+          <ThemedText style={styles.score}>{awayScore}</ThemedText>
         </View>
       </View>
       
@@ -222,19 +373,17 @@ export default function LiveMatchScreen() {
           onPress={toggleTimer}
         >
           <ThemedText style={styles.timerBtnText}>
-            {isRunning ? "⏸️ Pauza" : "▶️ Start"}
+            {isRunning ? "⏸ Pauza" : "▶ Start"}
           </ThemedText>
         </Pressable>
-        {half === 1 && seconds > 0 && (
+        {half === "first" && (
           <Pressable style={styles.halfBtn} onPress={startSecondHalf}>
-            <ThemedText style={styles.halfBtnText}>2. połowa →</ThemedText>
+            <ThemedText style={styles.halfBtnText}>2. połowa</ThemedText>
           </Pressable>
         )}
-        {half === 2 && (
-          <Pressable style={styles.endBtn} onPress={endMatch}>
-            <ThemedText style={styles.endBtnText}>🏁 Zakończ</ThemedText>
-          </Pressable>
-        )}
+        <Pressable style={styles.endBtn} onPress={endMatch}>
+          <ThemedText style={styles.endBtnText}>Zakończ</ThemedText>
+        </Pressable>
       </View>
       
       {/* Quick Actions */}
@@ -249,11 +398,11 @@ export default function LiveMatchScreen() {
             <ThemedText style={styles.actionIcon}>🎯</ThemedText>
             <ThemedText style={styles.actionLabel}>Asysta</ThemedText>
           </Pressable>
-          <Pressable style={[styles.actionBtn, styles.yellowBtn]} onPress={() => addEvent("yellow")}>
+          <Pressable style={[styles.actionBtn, styles.yellowBtn]} onPress={() => addEvent("yellow_card")}>
             <ThemedText style={styles.actionIcon}>🟨</ThemedText>
             <ThemedText style={styles.actionLabel}>Żółta</ThemedText>
           </Pressable>
-          <Pressable style={[styles.actionBtn, styles.redBtn]} onPress={() => addEvent("red")}>
+          <Pressable style={[styles.actionBtn, styles.redBtn]} onPress={() => addEvent("red_card")}>
             <ThemedText style={styles.actionIcon}>🟥</ThemedText>
             <ThemedText style={styles.actionLabel}>Czerwona</ThemedText>
           </Pressable>
@@ -261,7 +410,7 @@ export default function LiveMatchScreen() {
             <ThemedText style={styles.actionIcon}>🧤</ThemedText>
             <ThemedText style={styles.actionLabel}>Obrona</ThemedText>
           </Pressable>
-          <Pressable style={[styles.actionBtn, styles.subBtn]} onPress={() => addEvent("sub_in")}>
+          <Pressable style={[styles.actionBtn, styles.subBtn]} onPress={() => addEvent("substitution_in")}>
             <ThemedText style={styles.actionIcon}>🔄</ThemedText>
             <ThemedText style={styles.actionLabel}>Zmiana</ThemedText>
           </Pressable>
@@ -271,36 +420,27 @@ export default function LiveMatchScreen() {
       {/* Events Timeline */}
       <View style={styles.eventsSection}>
         <ThemedText type="subtitle" style={styles.sectionTitle}>
-          Przebieg meczu ({events.length})
+          Oś czasu ({events.length})
         </ThemedText>
         <ScrollView style={styles.eventsList}>
           {events.length === 0 ? (
             <ThemedText style={styles.emptyText}>
-              Brak wydarzeń. Użyj przycisków powyżej.
+              Brak wydarzeń. Dodaj pierwsze wydarzenie meczu.
             </ThemedText>
           ) : (
-            events.map(event => (
-              <Pressable
-                key={event.id}
-                style={styles.eventItem}
-                onLongPress={() => {
-                  Alert.alert(
-                    "Usuń wydarzenie",
-                    `Czy usunąć: ${getEventLabel(event.type)} - ${event.playerName}?`,
-                    [
-                      { text: "Anuluj", style: "cancel" },
-                      { text: "Usuń", style: "destructive", onPress: () => removeEvent(event.id) },
-                    ]
-                  );
-                }}
-              >
+            events.map((event) => (
+              <View key={event.id} style={styles.eventItem}>
                 <ThemedText style={styles.eventMinute}>{event.minute}'</ThemedText>
                 <ThemedText style={styles.eventIcon}>{getEventIcon(event.type)}</ThemedText>
                 <View style={styles.eventInfo}>
                   <ThemedText style={styles.eventPlayer}>{event.playerName}</ThemedText>
-                  <ThemedText style={styles.eventType}>{getEventLabel(event.type)}</ThemedText>
+                  <ThemedText style={styles.eventType}>
+                    {getEventLabel(event.type)}
+                    {event.assistPlayerName && ` (asysta: ${event.assistPlayerName})`}
+                  </ThemedText>
                 </View>
-              </Pressable>
+                <ThemedText style={styles.eventHalf}>{getHalfLabel(event.half)}</ThemedText>
+              </View>
             ))
           )}
         </ScrollView>
@@ -309,15 +449,15 @@ export default function LiveMatchScreen() {
       {/* Player Selection Modal */}
       <Modal
         visible={showPlayerModal}
-        animationType="slide"
         transparent
+        animationType="slide"
         onRequestClose={() => setShowPlayerModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <ThemedText type="subtitle">
-                {pendingEventType && `${getEventIcon(pendingEventType)} ${getEventLabel(pendingEventType)}`}
+                {pendingEventType ? getEventLabel(pendingEventType) : "Wybierz zawodnika"}
               </ThemedText>
               <Pressable onPress={() => setShowPlayerModal(false)}>
                 <ThemedText style={styles.closeBtn}>✕</ThemedText>
@@ -325,7 +465,7 @@ export default function LiveMatchScreen() {
             </View>
             <ThemedText style={styles.modalSubtitle}>Wybierz zawodnika:</ThemedText>
             <ScrollView style={styles.playerList}>
-              {players?.map((player: any) => (
+              {players?.map((player) => (
                 <Pressable
                   key={player.id}
                   style={styles.playerItem}
@@ -335,13 +475,69 @@ export default function LiveMatchScreen() {
                     {player.jerseyNumber || "-"}
                   </ThemedText>
                   <ThemedText style={styles.playerName}>{player.name}</ThemedText>
-                  <ThemedText style={styles.playerPosition}>{player.position || ""}</ThemedText>
+                  <ThemedText style={styles.playerPosition}>{player.position}</ThemedText>
                 </Pressable>
               ))}
             </ScrollView>
           </View>
         </View>
       </Modal>
+      
+      {/* Assist Selection Modal */}
+      <Modal
+        visible={showAssistModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAssistModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText type="subtitle">Asysta</ThemedText>
+              <Pressable onPress={() => {
+                confirmGoalWithAssist();
+              }}>
+                <ThemedText style={styles.closeBtn}>✕</ThemedText>
+              </Pressable>
+            </View>
+            <ThemedText style={styles.modalSubtitle}>
+              Bramka: {pendingGoalEvent?.playerName}
+            </ThemedText>
+            <ThemedText style={styles.modalSubtitle}>
+              Wybierz asystującego (lub pomiń):
+            </ThemedText>
+            <Pressable
+              style={[styles.playerItem, { backgroundColor: "#f0f0f0" }]}
+              onPress={() => confirmGoalWithAssist()}
+            >
+              <ThemedText style={styles.playerName}>Bez asysty</ThemedText>
+            </Pressable>
+            <ScrollView style={styles.playerList}>
+              {players?.filter(p => p.id !== pendingGoalEvent?.playerId).map((player) => (
+                <Pressable
+                  key={player.id}
+                  style={styles.playerItem}
+                  onPress={() => confirmGoalWithAssist(player.id, player.name)}
+                >
+                  <ThemedText style={styles.playerNumber}>
+                    {player.jerseyNumber || "-"}
+                  </ThemedText>
+                  <ThemedText style={styles.playerName}>{player.name}</ThemedText>
+                  <ThemedText style={styles.playerPosition}>{player.position}</ThemedText>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+      
+      {/* Saving indicator */}
+      {addEventMutation.isPending && (
+        <View style={styles.savingOverlay}>
+          <ActivityIndicator color="#fff" />
+          <ThemedText style={styles.savingText}>Zapisywanie...</ThemedText>
+        </View>
+      )}
     </ThemedView>
   );
 }
@@ -515,6 +711,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
   },
+  eventHalf: {
+    fontSize: 10,
+    color: "#999",
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -568,5 +768,22 @@ const styles = StyleSheet.create({
   playerPosition: {
     color: "#666",
     fontSize: 12,
+  },
+  savingOverlay: {
+    position: "absolute",
+    bottom: 100,
+    left: "50%",
+    transform: [{ translateX: -60 }],
+    backgroundColor: "rgba(0,0,0,0.8)",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  savingText: {
+    color: "#fff",
+    fontSize: 14,
   },
 });

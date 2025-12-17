@@ -555,6 +555,35 @@ export const appRouter = router({
         const id = await db.addMatchStats(input);
         return { id };
       }),
+    
+    addEvent: protectedProcedure
+      .input(z.object({
+        matchId: z.number(),
+        playerId: z.number().optional(),
+        assistPlayerId: z.number().optional(),
+        eventType: z.enum(["goal", "assist", "yellow_card", "red_card", "substitution_in", "substitution_out", "save", "injury"]),
+        minute: z.number(),
+        half: z.enum(["first", "second", "extra_first", "extra_second", "penalties"]).default("first"),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const match = await db.getMatchById(input.matchId);
+        if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono meczu" });
+        const { hasAccess } = await checkClubAccess(ctx.user.id, match.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        const id = await db.createMatchEvent(input);
+        return { id };
+      }),
+    
+    getEvents: protectedProcedure
+      .input(z.object({ matchId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const match = await db.getMatchById(input.matchId);
+        if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono meczu" });
+        const { hasAccess } = await checkClubAccess(ctx.user.id, match.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        return db.getMatchEvents(input.matchId);
+      }),
   }),
 
   // ============================================
@@ -1485,6 +1514,32 @@ export const appRouter = router({
         const html = generateReportHTML(report);
         return { html, title: report.title };
       }),
+    
+    generateMatchReport: protectedProcedure
+      .input(z.object({ 
+        matchId: z.number(),
+        format: z.enum(["html", "csv"]).default("html"),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const match = await db.getMatchById(input.matchId);
+        if (!match) throw new TRPCError({ code: "NOT_FOUND", message: "Nie znaleziono meczu" });
+        const { hasAccess } = await checkClubAccess(ctx.user.id, match.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        
+        const { generateMatchReportData, generateMatchReportHtml, generateMatchReportCsv } = await import("./services/pdfService");
+        const data = await generateMatchReportData(input.matchId);
+        if (!data) throw new TRPCError({ code: "NOT_FOUND", message: "Nie można wygenerować raportu" });
+        
+        const content = input.format === "csv" 
+          ? generateMatchReportCsv(data) 
+          : generateMatchReportHtml(data);
+        
+        return { 
+          content, 
+          title: `Raport meczowy - ${data.match.opponent}`,
+          format: input.format,
+        };
+      }),
   }),
 
   // ============================================
@@ -2399,6 +2454,71 @@ export const appRouter = router({
         await db.markChangeReverted(input.changeId, ctx.user.id);
         
         return { success: true };
+      }),
+  }),
+
+  // ============================================
+  // PZPN INTEGRATION ROUTER
+  // ============================================
+  pzpn: router({
+    getRegions: publicProcedure.query(async () => {
+      const { getAvailableRegions } = await import("./services/pzpnService");
+      return getAvailableRegions();
+    }),
+    
+    getLeagueLevels: publicProcedure.query(async () => {
+      const { getLeagueLevels } = await import("./services/pzpnService");
+      return getLeagueLevels();
+    }),
+    
+    searchTeam: protectedProcedure
+      .input(z.object({
+        query: z.string().min(2),
+        regionCode: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { searchTeam } = await import("./services/pzpnService");
+        return searchTeam(input.query, input.regionCode);
+      }),
+    
+    fetchLeague: protectedProcedure
+      .input(z.object({
+        season: z.string(),
+        level: z.number(),
+        group: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const { fetchWzpnLeague } = await import("./services/pzpnService");
+        return fetchWzpnLeague(input.season, input.level, input.group);
+      }),
+    
+    linkClub: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        pzpnTeamId: z.string(),
+        regionCode: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !permissions.canEditClub) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień" });
+        }
+        
+        const { linkClubToPzpnTeam } = await import("./services/pzpnService");
+        const success = await linkClubToPzpnTeam(input.clubId, input.pzpnTeamId, input.regionCode);
+        return { success };
+      }),
+    
+    syncLeagueData: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        }
+        
+        const { syncClubLeagueData } = await import("./services/pzpnService");
+        return syncClubLeagueData(input.clubId);
       }),
   }),
 });

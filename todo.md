@@ -607,3 +607,45 @@
 - [x] Auto-award badges when thresholds reached
 - [x] Badge definitions for all categories (goals, assists, attendance, etc.)
 - [x] Next milestone progress tracking
+
+
+## Live Stats Database Integration (Completed)
+- [x] Save match events to database in real-time
+- [x] Match events table schema (matchEvents)
+- [x] API endpoint for creating match events
+- [x] Update player stats after match ends
+- [x] Match timeline persistence
+
+## Badge Notifications (Completed)
+- [x] Push notification when badge is earned
+- [x] Badge notification service integration
+- [x] In-app notification for new achievements
+- [ ] Badge celebration animation (UI enhancement)
+
+## Match Report PDF Export (Completed)
+- [x] Single match report generation
+- [x] Include match events timeline
+- [x] Player statistics for the match
+- [x] Team formation and lineup
+- [ ] Share/download match report (UI integration)
+
+
+## Facebook & Instagram Integration (Backend Ready)
+- [x] Social media integration service (socialMediaService.ts)
+- [x] Database schema for connections and posts
+- [ ] Facebook/Instagram account connection UI
+- [ ] Match statistics sharing templates
+- [ ] Match announcement/preview templates
+- [ ] Post scheduler for social media
+- [ ] Social media settings screen
+
+
+## PZPN Data Integration (In Progress)
+- [x] Research PZPN/OZPN data sources and APIs
+- [x] PZPN data scraping/API service
+- [x] Regional associations (OZPN) selection
+- [x] League tables import
+- [x] Team selection and registration
+- [ ] Manager verification as team representative
+- [ ] Automatic data synchronization scheduler
+- [ ] Match schedule import from PZPN
