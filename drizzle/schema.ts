@@ -855,3 +855,32 @@ export const playerAchievementsRelations = relations(playerAchievements, ({ one 
   player: one(players, { fields: [playerAchievements.playerId], references: [players.id] }),
   achievement: one(achievements, { fields: [playerAchievements.achievementId], references: [achievements.id] }),
 }));
+
+
+/**
+ * Training goals - player goals with progress tracking
+ */
+export const trainingGoals = mysqlTable("trainingGoals", {
+  id: int("id").autoincrement().primaryKey(),
+  playerId: int("playerId").notNull(),
+  clubId: int("clubId").notNull(),
+  goalType: mysqlEnum("goalType", ["goals", "assists", "attendance", "rating", "custom"]).notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  targetValue: int("targetValue").notNull(),
+  currentValue: int("currentValue").default(0).notNull(),
+  startDate: timestamp("startDate").defaultNow().notNull(),
+  endDate: timestamp("endDate"),
+  status: mysqlEnum("status", ["active", "completed", "failed", "cancelled"]).default("active").notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type TrainingGoal = typeof trainingGoals.$inferSelect;
+export type InsertTrainingGoal = typeof trainingGoals.$inferInsert;
+
+export const trainingGoalsRelations = relations(trainingGoals, ({ one }) => ({
+  player: one(players, { fields: [trainingGoals.playerId], references: [players.id] }),
+  club: one(clubs, { fields: [trainingGoals.clubId], references: [clubs.id] }),
+}));

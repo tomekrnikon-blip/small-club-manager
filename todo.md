@@ -367,3 +367,25 @@
 - [x] Time range selector (3m, 6m, 1y, all)
 - [x] Period summary statistics
 - [x] Development trends screen (player-trends.tsx)
+
+
+## Club Leaderboard (Completed)
+- [x] Points calculation from achievements and stats
+- [x] Season leaderboard with rankings and podium
+- [x] Category leaders (goals, assists, attendance, rating)
+- [x] Monthly/weekly/season time range filter
+- [x] Leaderboard screen (club-leaderboard.tsx)
+
+## Training Goals (Completed)
+- [x] Database schema for player goals (trainingGoals table)
+- [x] Goal types: goals, assists, attendance, rating, custom
+- [x] Goal creation form with target values
+- [x] Progress tracking with visual progress bars
+- [x] Goals screen (training-goals.tsx)
+
+## Achievements Export (Completed)
+- [x] Certificate/diploma template design with preview
+- [x] Player achievements summary with selection
+- [x] PDF generation for printing
+- [x] Share achievements functionality
+- [x] Export screen (achievements-export.tsx)

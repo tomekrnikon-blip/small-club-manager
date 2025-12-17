@@ -253,6 +253,21 @@ export default function MoreScreen() {
             onPress={() => router.push("/player-trends" as any)}
           />
           <MenuItem
+            icon="leaderboard"
+            label="Ranking klubowy"
+            onPress={() => router.push("/club-leaderboard" as any)}
+          />
+          <MenuItem
+            icon="flag"
+            label="Cele treningowe"
+            onPress={() => router.push("/training-goals" as any)}
+          />
+          <MenuItem
+            icon="card-giftcard"
+            label="Eksport dyplomu"
+            onPress={() => router.push("/achievements-export" as any)}
+          />
+          <MenuItem
             icon="person"
             label="Panel rodzica"
             onPress={() => router.push("/parent-panel" as any)}
