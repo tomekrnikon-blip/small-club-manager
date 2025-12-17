@@ -237,3 +237,10 @@
 - [x] Automatic reminder scheduling before trainings (auto-reminders.ts, auto-reminders.tsx)
 - [x] Team frequency comparison chart (team-frequency.tsx)
 - [x] Excel/CSV export for frequency data (frequency-report.tsx)
+
+
+## WhatsApp Integration (In Progress)
+- [x] WhatsApp Business API configuration service (whatsapp-service.ts)
+- [x] WhatsApp settings screen for users (whatsapp-settings.tsx)
+- [x] Integration with notification system (attendance-notifications.ts)
+- [x] WhatsApp message templates for reminders (whatsapp-templates.tsx)

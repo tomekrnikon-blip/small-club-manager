@@ -6,6 +6,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getWhatsAppConfig, sendTemplatedMessage, sendWhatsAppMessage } from './whatsapp-service';
 
 const ATTENDANCE_NOTIFICATION_KEY = 'attendance_notifications_sent';
 
@@ -172,4 +173,82 @@ export function generatePlayerAttendanceSMS(
   const eventName = eventType === 'training' ? 'treningu' : 'meczu';
   
   return `Cześć ${playerName}! Twoja obecność na ${eventName} z dnia ${dateStr} nie została jeszcze oznaczona. Prosimy o kontakt z trenerem.`;
+}
+
+/**
+ * Send attendance reminder via WhatsApp (if configured)
+ */
+export async function sendWhatsAppAttendanceReminder(
+  playerPhone: string,
+  playerName: string,
+  eventType: 'training' | 'match',
+  eventDate: Date
+): Promise<{ success: boolean; error?: string }> {
+  const config = await getWhatsAppConfig();
+  
+  if (!config.enabled) {
+    return { success: false, error: 'WhatsApp nie jest włączony' };
+  }
+
+  const dateStr = eventDate.toLocaleDateString('pl-PL', {
+    day: 'numeric',
+    month: 'long',
+  });
+
+  // Try to use template first
+  const result = await sendTemplatedMessage(playerPhone, 'attendance_missing', {
+    date: dateStr,
+  });
+
+  // If template fails, send plain message
+  if (!result.success) {
+    const message = generatePlayerAttendanceSMS(playerName, eventType, eventDate);
+    return sendWhatsAppMessage(playerPhone, message);
+  }
+
+  return result;
+}
+
+/**
+ * Send bulk WhatsApp attendance reminders
+ */
+export async function sendBulkWhatsAppReminders(
+  players: Array<{ name: string; phone?: string }>,
+  eventType: 'training' | 'match',
+  eventDate: Date
+): Promise<{ sent: number; failed: number; skipped: number }> {
+  const config = await getWhatsAppConfig();
+  
+  if (!config.enabled) {
+    return { sent: 0, failed: 0, skipped: players.length };
+  }
+
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const player of players) {
+    if (!player.phone) {
+      skipped++;
+      continue;
+    }
+
+    const result = await sendWhatsAppAttendanceReminder(
+      player.phone,
+      player.name,
+      eventType,
+      eventDate
+    );
+
+    if (result.success) {
+      sent++;
+    } else {
+      failed++;
+    }
+
+    // Rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
+  return { sent, failed, skipped };
 }
