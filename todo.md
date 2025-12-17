@@ -566,3 +566,44 @@
 - [x] Include podium and full ranking list
 - [x] Category filter in export (goals, assists, attendance, rating, minutes)
 - [x] Team filter and preview before export
+
+
+## Live Match Statistics (In Progress)
+- [ ] Live match screen with real-time timer
+- [ ] Quick buttons for goals, assists, cards during match
+- [ ] Player selection for each event
+- [ ] Match timeline with events
+- [ ] Pause/resume timer functionality
+- [ ] End match and save all stats
+
+## Season Comparison (In Progress)
+- [ ] Compare stats between different seasons
+- [ ] Charts showing goals, wins, attendance trends
+- [ ] Team performance over multiple seasons
+- [ ] Best season highlights
+
+## Automatic Awards (In Progress)
+- [ ] Service for detecting milestone achievements
+- [ ] Auto-award badges when milestones reached
+- [ ] Notification to player about new award
+- [ ] Award ceremony animation/modal
+
+
+## Live Match Statistics (Completed)
+- [x] Real-time match timer with half tracking (live-match.tsx)
+- [x] Quick stat entry buttons (goal, assist, card, sub)
+- [x] Player selection for stat attribution
+- [x] Live score display
+- [x] Match events timeline
+
+## Season Comparison (Completed)
+- [x] Compare two seasons side by side (season-comparison.tsx)
+- [x] Charts for goals, wins, attendance trends
+- [x] Team performance comparison
+- [x] Season selector
+
+## Automatic Awards (Completed)
+- [x] Milestone detection service (autoAwardsService.ts)
+- [x] Auto-award badges when thresholds reached
+- [x] Badge definitions for all categories (goals, assists, attendance, etc.)
+- [x] Next milestone progress tracking

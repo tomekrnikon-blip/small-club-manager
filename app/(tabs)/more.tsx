@@ -223,6 +223,16 @@ export default function MoreScreen() {
             onPress={() => router.push("/coach-dashboard" as any)}
           />
           <MenuItem
+            icon="timer"
+            label="Statystyki na żywo"
+            onPress={() => router.push("/live-match" as any)}
+          />
+          <MenuItem
+            icon="compare-arrows"
+            label="Porównanie sezonów"
+            onPress={() => router.push("/season-comparison" as any)}
+          />
+          <MenuItem
             icon="family-restroom"
             label="Powiadomienia dla rodziców"
             onPress={() => router.push("/parent-notifications" as any)}
