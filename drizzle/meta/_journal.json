@@ -50,6 +50,13 @@
       "when": 1765905083617,
       "tag": "0006_optimal_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1765956092816,
+      "tag": "0007_bumpy_nighthawk",
+      "breakpoints": true
     }
   ]
 }

@@ -617,3 +617,54 @@ export type InsertTwoFactorAuth = typeof twoFactorAuth.$inferInsert;
 export const twoFactorAuthRelations = relations(twoFactorAuth, ({ one }) => ({
   user: one(users, { fields: [twoFactorAuth.userId], references: [users.id] }),
 }));
+
+
+/**
+ * Player ratings table - coach ratings for players after trainings/matches
+ */
+export const playerRatings = mysqlTable("playerRatings", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  playerId: int("playerId").notNull(),
+  coachId: int("coachId").notNull(),
+  eventType: mysqlEnum("eventType", ["training", "match"]).notNull(),
+  eventId: int("eventId").notNull(),
+  eventDate: date("eventDate").notNull(),
+  technique: int("technique").notNull(), // 1-5
+  engagement: int("engagement").notNull(), // 1-5
+  progress: int("progress").notNull(), // 1-5
+  teamwork: int("teamwork").notNull(), // 1-5
+  overall: decimal("overall", { precision: 3, scale: 2 }).notNull(), // calculated average
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PlayerRating = typeof playerRatings.$inferSelect;
+export type InsertPlayerRating = typeof playerRatings.$inferInsert;
+
+export const playerRatingsRelations = relations(playerRatings, ({ one }) => ({
+  player: one(players, { fields: [playerRatings.playerId], references: [players.id] }),
+  coach: one(users, { fields: [playerRatings.coachId], references: [users.id] }),
+}));
+
+/**
+ * Parent-child relationships for parent panel
+ */
+export const parentChildren = mysqlTable("parentChildren", {
+  id: int("id").autoincrement().primaryKey(),
+  parentUserId: int("parentUserId").notNull(),
+  playerId: int("playerId").notNull(),
+  relationship: mysqlEnum("relationship", ["parent", "guardian", "other"]).default("parent").notNull(),
+  isVerified: boolean("isVerified").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ParentChild = typeof parentChildren.$inferSelect;
+export type InsertParentChild = typeof parentChildren.$inferInsert;
+
+export const parentChildrenRelations = relations(parentChildren, ({ one }) => ({
+  parent: one(users, { fields: [parentChildren.parentUserId], references: [users.id] }),
+  player: one(players, { fields: [parentChildren.playerId], references: [players.id] }),
+}));

@@ -262,3 +262,25 @@
 - [x] Coach dashboard with team attendance and stats (coach-dashboard.tsx)
 - [x] Automatic parent notifications for child absences (parentNotificationService.ts, parent-notifications.tsx)
 - [x] PDF export for frequency and statistics reports (pdf-export.tsx, pdfService.ts)
+
+
+## Player Rating System (Completed)
+- [x] Database schema for player ratings (player_ratings table)
+- [x] Rating categories: technique, engagement, progress, teamwork
+- [x] Coach rating form after training/match (player-rating.tsx)
+- [x] Player rating history and trends (player-ratings.tsx)
+- [x] Rating summary in player profile
+
+## Parent Panel (Completed)
+- [x] Parent role in club membership (parentChildren table)
+- [x] Child schedule view (trainings, matches)
+- [x] Attendance history for child
+- [x] Payment history and pending fees
+- [x] Parent panel screen (parent-panel.tsx)
+
+## Team Statistics Dashboard (Completed)
+- [x] Match results comparison charts
+- [x] Attendance trends over time
+- [x] Top scorers ranking
+- [x] Season summary statistics
+- [x] Team performance indicators (team-statistics.tsx)

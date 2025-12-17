@@ -1902,6 +1902,143 @@ export const appRouter = router({
         }));
       }),
   }),
+
+  // ============================================
+  // PLAYER RATINGS ROUTER
+  // ============================================
+  playerRatings: router({
+    create: protectedProcedure
+      .input(z.object({
+        clubId: z.number(),
+        playerId: z.number(),
+        eventType: z.enum(["training", "match"]),
+        eventId: z.number(),
+        eventDate: z.string(),
+        technique: z.number().min(1).max(5),
+        engagement: z.number().min(1).max(5),
+        progress: z.number().min(1).max(5),
+        teamwork: z.number().min(1).max(5),
+        overall: z.number(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !permissions.canEditPlayers) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień do oceniania zawodników" });
+        }
+        
+        const id = await db.createPlayerRating({
+          ...input,
+          coachId: ctx.user.id,
+          eventDate: new Date(input.eventDate),
+          overall: input.overall.toString(),
+        });
+        return { id };
+      }),
+    
+    listByPlayer: protectedProcedure
+      .input(z.object({ playerId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getPlayerRatingsByPlayerId(input.playerId);
+      }),
+    
+    listByClub: protectedProcedure
+      .input(z.object({ clubId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const { hasAccess } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "Brak dostępu" });
+        return db.getPlayerRatingsByClubId(input.clubId);
+      }),
+    
+    listByEvent: protectedProcedure
+      .input(z.object({ eventType: z.enum(["training", "match"]), eventId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getPlayerRatingsByEvent(input.eventType, input.eventId);
+      }),
+    
+    getAverages: protectedProcedure
+      .input(z.object({ playerId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getPlayerAverageRatings(input.playerId);
+      }),
+    
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const rating = await db.getPlayerRatingById(input.id);
+        if (!rating) throw new TRPCError({ code: "NOT_FOUND", message: "Ocena nie znaleziona" });
+        
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, rating.clubId);
+        if (!hasAccess || !permissions.canEditPlayers) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień" });
+        }
+        
+        await db.deletePlayerRating(input.id);
+        return { success: true };
+      }),
+  }),
+
+  // ============================================
+  // PARENT-CHILD ROUTER
+  // ============================================
+  parentChildren: router({
+    linkChild: protectedProcedure
+      .input(z.object({
+        playerId: z.number(),
+        relationship: z.enum(["parent", "guardian", "other"]).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Check if relation already exists
+        const existing = await db.getParentChildRelation(ctx.user.id, input.playerId);
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: "Relacja już istnieje" });
+        }
+        
+        const id = await db.createParentChild({
+          parentUserId: ctx.user.id,
+          playerId: input.playerId,
+          relationship: input.relationship || "parent",
+        });
+        return { id };
+      }),
+    
+    getMyChildren: protectedProcedure.query(async ({ ctx }) => {
+      return db.getChildrenByParentId(ctx.user.id);
+    }),
+    
+    getParents: protectedProcedure
+      .input(z.object({ playerId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getParentsByPlayerId(input.playerId);
+      }),
+    
+    verify: protectedProcedure
+      .input(z.object({ id: z.number(), clubId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { hasAccess, permissions } = await checkClubAccess(ctx.user.id, input.clubId);
+        if (!hasAccess || !permissions.canEditPlayers) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Brak uprawnień" });
+        }
+        
+        await db.verifyParentChild(input.id);
+        return { success: true };
+      }),
+    
+    unlink: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        // Parents can unlink their own children
+        const relations = await db.getChildrenByParentId(ctx.user.id);
+        const relation = relations.find(r => r.id === input.id);
+        
+        if (!relation) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Relacja nie znaleziona" });
+        }
+        
+        await db.deleteParentChild(input.id);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

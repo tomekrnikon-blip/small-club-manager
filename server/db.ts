@@ -24,6 +24,8 @@ import {
   InsertScheduledNotification, scheduledNotifications,
   InsertAppSetting, appSettings,
   InsertUserSubscription, userSubscriptions,
+  InsertPlayerRating, playerRatings,
+  InsertParentChild, parentChildren,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1119,4 +1121,136 @@ export async function updateAcademyStudentReminderDate(studentId: number) {
   await db.update(academyStudents)
     .set({ lastReminderSent: new Date() })
     .where(eq(academyStudents.id, studentId));
+}
+
+
+// ============================================
+// PLAYER RATINGS FUNCTIONS
+// ============================================
+export async function createPlayerRating(data: InsertPlayerRating) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(playerRatings).values(data);
+  return result[0].insertId;
+}
+
+export async function getPlayerRatingsByPlayerId(playerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(playerRatings).where(eq(playerRatings.playerId, playerId)).orderBy(desc(playerRatings.eventDate));
+}
+
+export async function getPlayerRatingsByClubId(clubId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(playerRatings).where(eq(playerRatings.clubId, clubId)).orderBy(desc(playerRatings.eventDate));
+}
+
+export async function getPlayerRatingsByEvent(eventType: "training" | "match", eventId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(playerRatings).where(
+    and(
+      eq(playerRatings.eventType, eventType),
+      eq(playerRatings.eventId, eventId)
+    )
+  );
+}
+
+export async function getPlayerRatingById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(playerRatings).where(eq(playerRatings.id, id)).limit(1);
+  return result[0];
+}
+
+export async function updatePlayerRating(id: number, data: Partial<InsertPlayerRating>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(playerRatings).set(data).where(eq(playerRatings.id, id));
+}
+
+export async function deletePlayerRating(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(playerRatings).where(eq(playerRatings.id, id));
+}
+
+export async function getPlayerAverageRatings(playerId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const ratings = await db.select().from(playerRatings).where(eq(playerRatings.playerId, playerId));
+  if (ratings.length === 0) return null;
+  
+  const avg = {
+    technique: ratings.reduce((sum, r) => sum + r.technique, 0) / ratings.length,
+    engagement: ratings.reduce((sum, r) => sum + r.engagement, 0) / ratings.length,
+    progress: ratings.reduce((sum, r) => sum + r.progress, 0) / ratings.length,
+    teamwork: ratings.reduce((sum, r) => sum + r.teamwork, 0) / ratings.length,
+    overall: ratings.reduce((sum, r) => sum + Number(r.overall), 0) / ratings.length,
+    count: ratings.length,
+  };
+  return avg;
+}
+
+// ============================================
+// PARENT-CHILD RELATIONSHIP FUNCTIONS
+// ============================================
+export async function createParentChild(data: InsertParentChild) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(parentChildren).values(data);
+  return result[0].insertId;
+}
+
+export async function getChildrenByParentId(parentUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const relations = await db.select().from(parentChildren).where(eq(parentChildren.parentUserId, parentUserId));
+  const result = [];
+  for (const rel of relations) {
+    const player = await getPlayerById(rel.playerId);
+    if (player) {
+      result.push({ ...rel, player });
+    }
+  }
+  return result;
+}
+
+export async function getParentsByPlayerId(playerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const relations = await db.select().from(parentChildren).where(eq(parentChildren.playerId, playerId));
+  const result = [];
+  for (const rel of relations) {
+    const user = await getUserById(rel.parentUserId);
+    if (user) {
+      result.push({ ...rel, user });
+    }
+  }
+  return result;
+}
+
+export async function getParentChildRelation(parentUserId: number, playerId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(parentChildren).where(
+    and(
+      eq(parentChildren.parentUserId, parentUserId),
+      eq(parentChildren.playerId, playerId)
+    )
+  ).limit(1);
+  return result[0];
+}
+
+export async function verifyParentChild(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(parentChildren).set({ isVerified: true }).where(eq(parentChildren.id, id));
+}
+
+export async function deleteParentChild(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(parentChildren).where(eq(parentChildren.id, id));
 }
