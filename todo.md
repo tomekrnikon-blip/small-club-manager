@@ -734,3 +734,13 @@
 - [x] Store sync preferences in AsyncStorage
 - [x] Link to sync history from import screen
 - [x] fetchLeagueDataForClub function for on-demand sync
+
+
+## Notifications & Calendar Integration (Completed)
+- [x] Notifications screen with schedule changes list (ScheduleChangeCard integration)
+- [x] Mark notifications as read
+- [x] Calendar export integration (iOS/Android) - lib/calendar-export.ts
+- [x] Offline mode with data caching - lib/offline-cache.ts
+- [x] Cache league tables locally
+- [x] Pre-cache essential data function
+- [x] Cache statistics and management

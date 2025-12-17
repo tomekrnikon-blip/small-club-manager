@@ -5,6 +5,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { ScheduleChangeCard, ChangeType } from "@/components/schedule-change-card";
 import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,8 +15,53 @@ const notificationIcons: Record<string, { icon: string; color: string }> = {
   training: { icon: "fitness-center", color: AppColors.secondary },
   payment: { icon: "payment", color: AppColors.warning },
   callup: { icon: "people", color: AppColors.success },
+  schedule_change: { icon: "event", color: AppColors.warning },
+  new_match: { icon: "add-circle", color: AppColors.success },
+  sync: { icon: "sync", color: AppColors.info },
+  badge: { icon: "emoji-events", color: AppColors.primary },
   system: { icon: "info", color: "#64748b" },
 };
+
+// Helper to detect schedule change notifications
+function isScheduleChangeNotification(notification: any): boolean {
+  return notification.type === "schedule_change" || 
+    (notification.title?.includes("Zmiana terminu") || 
+     notification.title?.includes("Zmiana godziny") ||
+     notification.title?.includes("Zmiana miejsca"));
+}
+
+// Parse schedule change details from notification
+function parseScheduleChange(notification: any): {
+  changeType: ChangeType;
+  opponent: string;
+  oldValue: string;
+  newValue: string;
+} | null {
+  // Try to extract from metadata if available
+  if (notification.metadata) {
+    return {
+      changeType: notification.metadata.changeType || "date",
+      opponent: notification.metadata.opponent || "Przeciwnik",
+      oldValue: notification.metadata.oldValue || "",
+      newValue: notification.metadata.newValue || "",
+    };
+  }
+  
+  // Fallback: parse from message
+  const message = notification.message || "";
+  let changeType: ChangeType = "date";
+  
+  if (notification.title?.includes("godziny")) changeType = "time";
+  else if (notification.title?.includes("miejsca")) changeType = "venue";
+  else if (notification.title?.includes("odwołany")) changeType = "cancelled";
+  
+  return {
+    changeType,
+    opponent: "Przeciwnik",
+    oldValue: "Poprzedni termin",
+    newValue: "Nowy termin",
+  };
+}
 
 export default function NotificationsScreen() {
   const { isAuthenticated } = useAuth();
@@ -135,6 +181,27 @@ function NotificationCard({
   const createdAt = new Date(notification.createdAt);
   const timeAgo = getTimeAgo(createdAt);
 
+  // Check if this is a schedule change notification
+  if (isScheduleChangeNotification(notification)) {
+    const changeData = parseScheduleChange(notification);
+    if (changeData) {
+      return (
+        <Pressable onPress={onPress}>
+          <View style={!notification.isRead && styles.scheduleChangeUnread}>
+            <ScheduleChangeCard
+              changeType={changeData.changeType}
+              opponent={changeData.opponent}
+              oldValue={changeData.oldValue}
+              newValue={changeData.newValue}
+              timestamp={notification.createdAt}
+            />
+          </View>
+        </Pressable>
+      );
+    }
+  }
+
+  // Regular notification card
   return (
     <Pressable
       style={[styles.notificationCard, !notification.isRead && styles.notificationUnread]}
@@ -273,6 +340,12 @@ const styles = StyleSheet.create({
     backgroundColor: AppColors.primary,
     marginLeft: Spacing.sm,
     marginTop: 6,
+  },
+  scheduleChangeUnread: {
+    borderLeftWidth: 3,
+    borderLeftColor: AppColors.primary,
+    borderRadius: Radius.lg,
+    marginBottom: Spacing.sm,
   },
   emptyContainer: {
     alignItems: "center",
