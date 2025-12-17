@@ -11,6 +11,7 @@ import * as db from "../db";
 import { scheduledSync as leagueScheduledSync } from "./leagueScrapingService";
 import { scheduleLeagueSync as pzpnScheduledSync } from "./pzpnService";
 import { sendSMS, sendAppNotification } from "./notificationService.js";
+import { processExpiredTrials, sendTrialExpirationReminders } from "./trialService";
 
 // Process interval in milliseconds (default: 1 minute)
 const PROCESS_INTERVAL = 60 * 1000;
@@ -220,6 +221,28 @@ export function startCronService(): void {
       console.error("[Cron] League sync error:", error);
     }
   }, LEAGUE_SYNC_INTERVAL);
+  
+  // Process expired trials every hour
+  setInterval(async () => {
+    console.log("[Cron] Processing expired trials...");
+    try {
+      const result = await processExpiredTrials();
+      console.log(`[Cron] Expired trials processed: ${result.processed}`);
+    } catch (error) {
+      console.error("[Cron] Trial processing error:", error);
+    }
+  }, 60 * 60 * 1000);
+  
+  // Send trial expiration reminders every 6 hours
+  setInterval(async () => {
+    console.log("[Cron] Sending trial expiration reminders...");
+    try {
+      const result = await sendTrialExpirationReminders();
+      console.log(`[Cron] Trial reminders sent: ${result.sent}`);
+    } catch (error) {
+      console.error("[Cron] Trial reminder error:", error);
+    }
+  }, 6 * 60 * 60 * 1000);
   
   // Run initial processing
   setTimeout(async () => {

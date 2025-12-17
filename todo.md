@@ -787,3 +787,10 @@
 - [x] Trial router with status endpoints
 - [x] useTrialStatus hook for app-wide access
 - [x] Block editing after trial without subscription
+
+
+## Ad Banner & Trial Reminders (Completed)
+- [x] Ad banner component for trial period (updated ad-banner.tsx with showAds prop)
+- [x] Cron job for processing expired trials (cronService.ts)
+- [x] Reminder notifications 7, 3, 1 days before trial ends (trialService.ts)
+- [x] Trial expiration email template (emailService.ts)

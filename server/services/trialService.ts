@@ -193,3 +193,53 @@ export async function canPerformEditAction(clubId: number, userId: number): Prom
     reason: "Brak uprawnień do edycji." 
   };
 }
+
+
+/**
+ * Send reminders to clubs whose trial is about to expire (7 days, 3 days, 1 day before)
+ */
+export async function sendTrialExpirationReminders(): Promise<{ sent: number; skipped: number }> {
+  const allClubs = await db.getAllClubs();
+  const now = new Date();
+  let sent = 0;
+  let skipped = 0;
+
+  for (const club of allClubs) {
+    // Skip clubs without active trial
+    if (!club.isTrialActive || !club.trialEndDate) {
+      skipped++;
+      continue;
+    }
+
+    // Calculate days remaining
+    const msRemaining = club.trialEndDate.getTime() - now.getTime();
+    const daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+
+    // Send reminders at 7, 3, and 1 day(s) before expiration
+    const reminderDays = [7, 3, 1];
+    
+    if (reminderDays.includes(daysRemaining)) {
+      // Send reminder notification
+      let message = "";
+      if (daysRemaining === 7) {
+        message = "Twój okres próbny kończy się za 7 dni. Wykup subskrypcję aby zachować pełny dostęp do wszystkich funkcji.";
+      } else if (daysRemaining === 3) {
+        message = "Pozostały tylko 3 dni okresu próbnego! Nie czekaj - wykup subskrypcję już teraz.";
+      } else if (daysRemaining === 1) {
+        message = "OSTATNI DZIEŃ okresu próbnego! Jutro stracisz możliwość edycji danych. Wykup subskrypcję aby kontynuować.";
+      }
+
+      await db.createNotification({
+        clubId: club.id,
+        userId: club.userId,
+        type: "general",
+        title: `Okres próbny kończy się za ${daysRemaining} ${daysRemaining === 1 ? 'dzień' : 'dni'}`,
+        message: message,
+      });
+
+      sent++;
+    }
+  }
+
+  return { sent, skipped };
+}

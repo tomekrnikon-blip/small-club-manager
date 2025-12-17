@@ -578,3 +578,93 @@ Miejsce: ${location}
 
   return sendClubEmail(clubId, parentEmail, `${eventIcon} Przypomnienie: ${eventTitle} - ${playerName}`, html, text);
 }
+
+
+/**
+ * Send trial expiration reminder email
+ */
+export async function sendTrialExpirationEmail(
+  clubId: number,
+  userEmail: string,
+  userName: string,
+  clubName: string,
+  daysRemaining: number
+): Promise<EmailResult> {
+  let urgencyColor = "#3b82f6"; // blue
+  let urgencyText = "Informacja";
+  
+  if (daysRemaining <= 1) {
+    urgencyColor = "#ef4444"; // red
+    urgencyText = "PILNE";
+  } else if (daysRemaining <= 3) {
+    urgencyColor = "#f59e0b"; // orange
+    urgencyText = "Ważne";
+  }
+  
+  const subject = `${urgencyText}: Okres próbny kończy się za ${daysRemaining} ${daysRemaining === 1 ? 'dzień' : 'dni'} - ${clubName}`;
+  
+  const htmlBody = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, ${urgencyColor} 0%, ${urgencyColor}dd 100%); padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">⏰ Okres próbny dobiega końca</h1>
+      </div>
+      <div style="padding: 20px; background: #f8fafc;">
+        <p>Cześć <strong>${userName}</strong>,</p>
+        <p>Twój 30-dniowy okres próbny w aplikacji Small Club Manager dla klubu <strong>${clubName}</strong> kończy się za <strong>${daysRemaining} ${daysRemaining === 1 ? 'dzień' : 'dni'}</strong>.</p>
+        
+        <div style="background: white; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid ${urgencyColor};">
+          <h3 style="margin: 0 0 12px 0; color: ${urgencyColor};">Co się stanie po zakończeniu okresu próbnego?</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #475569;">
+            <li>Stracisz możliwość edycji danych klubu</li>
+            <li>Nie będziesz mógł dodawać nowych zawodników i meczów</li>
+            <li>Dane pozostaną dostępne tylko do odczytu</li>
+          </ul>
+        </div>
+        
+        <div style="background: #22c55e15; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #22c55e;">
+          <h3 style="margin: 0 0 12px 0; color: #22c55e;">Wykup subskrypcję i korzystaj bez ograniczeń!</h3>
+          <ul style="margin: 0; padding-left: 20px; color: #475569;">
+            <li>Pełny dostęp do wszystkich funkcji</li>
+            <li>Brak reklam</li>
+            <li>Nielimitowana liczba zawodników i meczów</li>
+            <li>Priorytetowe wsparcie techniczne</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${process.env.VITE_APP_URL || 'https://app.example.com'}/subscription" 
+             style="display: inline-block; background: #22c55e; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+            Wykup subskrypcję
+          </a>
+        </div>
+        
+        <p style="color: #64748b; font-size: 12px; margin-top: 24px;">
+          Wiadomość wygenerowana automatycznie przez Small Club Manager
+        </p>
+      </div>
+    </div>
+  `;
+
+  const textBody = `
+Okres próbny dobiega końca
+
+Cześć ${userName},
+
+Twój 30-dniowy okres próbny w aplikacji Small Club Manager dla klubu ${clubName} kończy się za ${daysRemaining} ${daysRemaining === 1 ? 'dzień' : 'dni'}.
+
+Co się stanie po zakończeniu okresu próbnego?
+- Stracisz możliwość edycji danych klubu
+- Nie będziesz mógł dodawać nowych zawodników i meczów
+- Dane pozostaną dostępne tylko do odczytu
+
+Wykup subskrypcję i korzystaj bez ograniczeń!
+- Pełny dostęp do wszystkich funkcji
+- Brak reklam
+- Nielimitowana liczba zawodników i meczów
+- Priorytetowe wsparcie techniczne
+
+Odwiedź aplikację aby wykupić subskrypcję.
+  `;
+
+  return sendClubEmail(clubId, userEmail, subject, htmlBody, textBody);
+}

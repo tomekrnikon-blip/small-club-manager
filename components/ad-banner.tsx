@@ -9,6 +9,8 @@ import { AppColors, Spacing, Radius } from '@/constants/theme';
 type AdBannerProps = {
   placement: 'home' | 'matches' | 'players' | 'more';
   style?: any;
+  showAds?: boolean; // If false, don't show ads (for premium users)
+  onUpgrade?: () => void;
 };
 
 type Ad = {
@@ -38,7 +40,7 @@ const DEFAULT_ADS: Ad[] = [
   },
 ];
 
-export function AdBanner({ placement, style }: AdBannerProps) {
+export function AdBanner({ placement, style, showAds = true, onUpgrade }: AdBannerProps) {
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
 
@@ -57,7 +59,7 @@ export function AdBanner({ placement, style }: AdBannerProps) {
     return () => clearInterval(interval);
   }, [ads.length]);
 
-  if (dismissed) return null;
+  if (dismissed || !showAds) return null;
 
   const handlePress = () => {
     if (currentAd.linkUrl) {
