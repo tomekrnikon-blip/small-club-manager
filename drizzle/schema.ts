@@ -73,6 +73,10 @@ export const clubs = mysqlTable("clubs", {
   isTrialActive: boolean("isTrialActive").default(true).notNull(),
   trialExpiredNotified: boolean("trialExpiredNotified").default(false).notNull(),
   subscriptionRequired: boolean("subscriptionRequired").default(false).notNull(),
+  // Custom club colors for social media templates
+  primaryColor: varchar("primaryColor", { length: 7 }).default("#22c55e"),
+  secondaryColor: varchar("secondaryColor", { length: 7 }).default("#1e3a5f"),
+  accentColor: varchar("accentColor", { length: 7 }).default("#ffffff"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -57,6 +57,11 @@ interface SocialShareCardProps {
   onClose: () => void;
   matchData: MatchData;
   type: TemplateType;
+  clubColors?: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
 }
 
 // Extended template styles with more designs
@@ -118,13 +123,31 @@ const TEMPLATE_STYLES: {
   },
 ];
 
-export function SocialShareCard({ visible, onClose, matchData, type }: SocialShareCardProps) {
-  const [selectedStyle, setSelectedStyle] = useState<TemplateStyle>("dark");
+// Club colors template - will be populated with actual club colors
+const getClubColorsTemplate = (clubColors?: { primary: string; secondary: string; accent: string }) => ({
+  id: "club" as const,
+  name: "Klubowy",
+  colors: {
+    bg: clubColors?.secondary || "#1e3a5f",
+    accent: clubColors?.primary || "#22c55e",
+    text: clubColors?.accent || "#ffffff",
+    secondary: clubColors?.primary || "#22c55e",
+  },
+  pattern: "none" as const,
+});
+
+export function SocialShareCard({ visible, onClose, matchData, type, clubColors }: SocialShareCardProps) {
+  const [selectedStyle, setSelectedStyle] = useState<TemplateStyle | "club">("dark");
+  
+  // Build template list including club colors if available
+  const allTemplates = clubColors 
+    ? [...TEMPLATE_STYLES, getClubColorsTemplate(clubColors)]
+    : TEMPLATE_STYLES;
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<"facebook" | "instagram" | "both">("both");
   const viewShotRef = useRef<any>(null);
 
-  const style = TEMPLATE_STYLES.find(s => s.id === selectedStyle) || TEMPLATE_STYLES[0];
+  const style = allTemplates.find(s => s.id === selectedStyle) || allTemplates[0];
 
   const getResultEmoji = () => {
     if (matchData.result === "win") return "🎉";
@@ -554,19 +577,23 @@ export function SocialShareCard({ visible, onClose, matchData, type }: SocialSha
               <ThemedText style={styles.sectionLabel}>Styl szablonu</ThemedText>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.styleOptions}>
-                  {TEMPLATE_STYLES.map((s) => (
+                  {allTemplates.map((s) => (
                     <Pressable
                       key={s.id}
                       style={[
                         styles.styleOption,
                         { backgroundColor: s.colors.bg, borderColor: s.colors.accent },
                         selectedStyle === s.id && styles.styleOptionSelected,
+                        s.id === "club" && styles.clubStyleOption,
                       ]}
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setSelectedStyle(s.id);
                       }}
                     >
+                      {s.id === "club" && (
+                        <MaterialIcons name="star" size={12} color={s.colors.accent} style={{ position: "absolute", top: 4, right: 4 }} />
+                      )}
                       <View style={[styles.stylePreview, { backgroundColor: s.colors.accent }]} />
                       <ThemedText style={[styles.styleName, { color: s.colors.text }]}>
                         {s.name}
@@ -900,6 +927,9 @@ const styles = StyleSheet.create({
   },
   styleOptionSelected: {
     borderWidth: 3,
+  },
+  clubStyleOption: {
+    borderStyle: "dashed",
   },
   stylePreview: {
     width: 24,

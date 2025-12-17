@@ -871,3 +871,13 @@
 - [x] Elegant gold border template
 - [x] Sport dynamic template
 - [x] Retro vintage template
+
+
+## Live Preview, Post History & Custom Colors (Completed)
+- [x] Live post preview with real FB/IG data before publishing
+- [x] Post history tracking in database (socialMediaPosts table)
+- [x] Social posts table schema (already exists)
+- [x] Post history screen with links to FB/IG
+- [x] Custom club colors for templates (primaryColor, secondaryColor, accentColor in clubs table)
+- [x] Club color picker in settings (club-colors.tsx)
+- [x] Apply club colors to all templates ("Klubowy" template option)
