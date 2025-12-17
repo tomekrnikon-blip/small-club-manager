@@ -817,3 +817,11 @@
 - [x] Admin push notifications for new subscriptions
 - [x] Admin alerts screen (admin/alerts.tsx)
 - [x] getAdminUsers database function
+
+
+## Admin Dashboard & FCM (Completed)
+- [x] Admin dashboard with alerts and statistics summary (admin/dashboard.tsx)
+- [x] Firebase Cloud Messaging integration (firebase-messaging.ts)
+- [x] Production AdMob ID configuration (admob-config.ts)
+- [x] FCM token registration service
+- [x] Notification channels for Android (default, alerts, reminders)
