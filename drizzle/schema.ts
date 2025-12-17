@@ -884,3 +884,71 @@ export const trainingGoalsRelations = relations(trainingGoals, ({ one }) => ({
   player: one(players, { fields: [trainingGoals.playerId], references: [players.id] }),
   club: one(clubs, { fields: [trainingGoals.clubId], references: [clubs.id] }),
 }));
+
+
+/**
+ * Seasonal awards - MVP, Top Scorer, etc.
+ */
+export const seasonalAwards = mysqlTable("seasonalAwards", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  playerId: int("playerId").notNull(),
+  season: varchar("season", { length: 20 }).notNull(), // e.g., "2024/2025"
+  awardType: mysqlEnum("awardType", ["mvp", "top_scorer", "best_attendance", "most_improved", "best_defender", "best_goalkeeper", "fair_play"]).notNull(),
+  title: varchar("title", { length: 100 }).notNull(),
+  description: text("description"),
+  stats: text("stats"), // JSON string with relevant statistics
+  awardedAt: timestamp("awardedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SeasonalAward = typeof seasonalAwards.$inferSelect;
+export type InsertSeasonalAward = typeof seasonalAwards.$inferInsert;
+
+export const seasonalAwardsRelations = relations(seasonalAwards, ({ one }) => ({
+  player: one(players, { fields: [seasonalAwards.playerId], references: [players.id] }),
+  club: one(clubs, { fields: [seasonalAwards.clubId], references: [clubs.id] }),
+}));
+
+/**
+ * Club announcements / bulletin board
+ */
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  clubId: int("clubId").notNull(),
+  authorId: int("authorId").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  content: text("content").notNull(),
+  priority: mysqlEnum("priority", ["normal", "important", "urgent"]).default("normal").notNull(),
+  pinned: boolean("pinned").default(false).notNull(),
+  publishedAt: timestamp("publishedAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = typeof announcements.$inferInsert;
+
+export const announcementsRelations = relations(announcements, ({ one }) => ({
+  club: one(clubs, { fields: [announcements.clubId], references: [clubs.id] }),
+  author: one(users, { fields: [announcements.authorId], references: [users.id] }),
+}));
+
+/**
+ * Announcement read status tracking
+ */
+export const announcementReads = mysqlTable("announcementReads", {
+  id: int("id").autoincrement().primaryKey(),
+  announcementId: int("announcementId").notNull(),
+  userId: int("userId").notNull(),
+  readAt: timestamp("readAt").defaultNow().notNull(),
+});
+
+export type AnnouncementRead = typeof announcementReads.$inferSelect;
+export type InsertAnnouncementRead = typeof announcementReads.$inferInsert;
+
+export const announcementReadsRelations = relations(announcementReads, ({ one }) => ({
+  announcement: one(announcements, { fields: [announcementReads.announcementId], references: [announcements.id] }),
+  user: one(users, { fields: [announcementReads.userId], references: [users.id] }),
+}));

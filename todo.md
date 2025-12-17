@@ -389,3 +389,25 @@
 - [x] PDF generation for printing
 - [x] Share achievements functionality
 - [x] Export screen (achievements-export.tsx)
+
+
+## Goal Notifications (Completed)
+- [x] Service for tracking goal progress (goalNotificationService.ts)
+- [x] Notifications when approaching goal (75%, 90%)
+- [x] Celebration notification on goal completion
+- [x] Milestone detection and message generation
+
+## Seasonal Awards (Completed)
+- [x] Database schema for awards (seasonalAwards table)
+- [x] Award types: MVP, Top Scorer, Best Attendance, Most Improved, Best Defender, Best Goalkeeper, Fair Play
+- [x] Season selector with historical data
+- [x] MVP featured card with podium display
+- [x] Awards screen (seasonal-awards.tsx)
+
+## Club Bulletin Board (Completed)
+- [x] Database schema for announcements (announcements, announcementReads tables)
+- [x] Announcement creation for coaches/admins
+- [x] Priority levels (normal, important, urgent)
+- [x] Read status tracking and filtering
+- [x] Pinned announcements support
+- [x] Bulletin board screen (bulletin-board.tsx)

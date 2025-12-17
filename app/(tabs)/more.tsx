@@ -268,6 +268,16 @@ export default function MoreScreen() {
             onPress={() => router.push("/achievements-export" as any)}
           />
           <MenuItem
+            icon="workspace-premium"
+            label="Nagrody sezonowe"
+            onPress={() => router.push("/seasonal-awards" as any)}
+          />
+          <MenuItem
+            icon="campaign"
+            label="Tablica ogłoszeń"
+            onPress={() => router.push("/bulletin-board" as any)}
+          />
+          <MenuItem
             icon="person"
             label="Panel rodzica"
             onPress={() => router.push("/parent-panel" as any)}
