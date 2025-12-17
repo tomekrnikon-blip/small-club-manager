@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -9,6 +10,7 @@ import { AppColors, Spacing, Radius } from "@/constants/theme";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/hooks/use-auth";
 import { addMatchToCalendar } from "@/lib/system-calendar";
+import { SocialShareCard } from "@/components/social-share-card";
 
 export default function MatchDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,6 +20,10 @@ export default function MatchDetailScreen() {
   const utils = trpc.useUtils();
 
   const matchId = parseInt(id || "0", 10);
+  
+  // Social share state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareType, setShareType] = useState<"result" | "preview" | "stats">("result");
 
   const { data: match, isLoading } = trpc.matches.get.useQuery(
     { id: matchId },
@@ -215,6 +221,64 @@ export default function MatchDetailScreen() {
           </Pressable>
         </View>
 
+        {/* Social Media Share */}
+        <View style={styles.section}>
+          <ThemedText style={styles.sectionTitle}>Udostępnij</ThemedText>
+          <Pressable
+            style={styles.callupButton}
+            onPress={() => {
+              setShareType(match.goalsScored !== null ? "result" : "preview");
+              setShowShareModal(true);
+            }}
+          >
+            <MaterialIcons name="share" size={24} color="#E4405F" />
+            <View style={styles.callupInfo}>
+              <ThemedText style={styles.callupTitle}>Udostępnij na social media</ThemedText>
+              <ThemedText style={styles.callupHint}>Facebook, Instagram z logo SKM</ThemedText>
+            </View>
+            <MaterialIcons name="chevron-right" size={24} color="#64748b" />
+          </Pressable>
+          
+          <View style={styles.shareOptions}>
+            <Pressable
+              style={[styles.shareOption, shareType === "result" && styles.shareOptionActive]}
+              onPress={() => {
+                setShareType("result");
+                setShowShareModal(true);
+              }}
+            >
+              <MaterialIcons name="emoji-events" size={20} color={shareType === "result" ? AppColors.primary : "#64748b"} />
+              <ThemedText style={[styles.shareOptionText, shareType === "result" && styles.shareOptionTextActive]}>
+                Wynik
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              style={[styles.shareOption, shareType === "preview" && styles.shareOptionActive]}
+              onPress={() => {
+                setShareType("preview");
+                setShowShareModal(true);
+              }}
+            >
+              <MaterialIcons name="event" size={20} color={shareType === "preview" ? AppColors.primary : "#64748b"} />
+              <ThemedText style={[styles.shareOptionText, shareType === "preview" && styles.shareOptionTextActive]}>
+                Zapowiedź
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              style={[styles.shareOption, shareType === "stats" && styles.shareOptionActive]}
+              onPress={() => {
+                setShareType("stats");
+                setShowShareModal(true);
+              }}
+            >
+              <MaterialIcons name="bar-chart" size={20} color={shareType === "stats" ? AppColors.primary : "#64748b"} />
+              <ThemedText style={[styles.shareOptionText, shareType === "stats" && styles.shareOptionTextActive]}>
+                Statystyki
+              </ThemedText>
+            </Pressable>
+          </View>
+        </View>
+
         {/* Notes */}
         {match.notes && (
           <View style={styles.section}>
@@ -245,6 +309,34 @@ export default function MatchDetailScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Social Share Modal */}
+      <SocialShareCard
+        visible={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        matchData={{
+          id: match.id,
+          opponent: match.opponent,
+          goalsScored: match.goalsScored,
+          goalsConceded: match.goalsConceded,
+          result: match.result as "win" | "draw" | "loss" | null,
+          homeAway: match.homeAway as "home" | "away",
+          matchDate: match.matchDate.toString(),
+          matchTime: match.matchTime,
+          location: match.location,
+          league: match.season,
+          clubName: "Mój Klub", // TODO: Get from club context
+          scorers: [], // TODO: Get from match stats
+          stats: {
+            totalGoals: match.goalsScored || 0,
+            totalAssists: 0,
+            yellowCards: 0,
+            redCards: 0,
+            saves: 0,
+          },
+        }}
+        type={shareType}
+      />
     </ThemedView>
   );
 }
@@ -453,5 +545,35 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  shareOptions: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  shareOption: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
+    gap: Spacing.xs,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  shareOptionActive: {
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary + "15",
+  },
+  shareOptionText: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  shareOptionTextActive: {
+    color: AppColors.primary,
   },
 });
