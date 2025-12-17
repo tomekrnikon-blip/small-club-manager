@@ -16,8 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { AppColors, Spacing, Radius } from '@/constants/theme';
-import { ClubSearch } from '@/components/club-search';
-import { PzpnClubSearchResult, POLISH_REGIONS, getRegions } from '@/lib/pzpn-client';
+import { ClubSelectionWizard } from '@/components/club-selection-wizard';
+import { Club, SeasonData, REGIONS } from '@/lib/polish-football-data';
 
 const CLUB_TYPES = [
   { id: 'amateur', name: 'Klub amatorski', icon: 'football-outline' as const },
@@ -26,18 +26,18 @@ const CLUB_TYPES = [
   { id: 'other', name: 'Inny', icon: 'ellipsis-horizontal' as const },
 ];
 
-type SetupMode = 'search' | 'manual';
+type SetupMode = 'select' | 'wizard' | 'manual';
 
 export default function OnboardingClubSetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
   // Mode selection
-  const [setupMode, setSetupMode] = useState<SetupMode>('search');
+  const [setupMode, setSetupMode] = useState<SetupMode>('select');
   
-  // Search mode state
-  const [selectedClub, setSelectedClub] = useState<PzpnClubSearchResult | null>(null);
-  const [selectedRegion, setSelectedRegion] = useState<string | undefined>();
+  // Wizard mode state
+  const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const [seasonData, setSeasonData] = useState<SeasonData | null>(null);
   
   // Manual mode state
   const [clubName, setClubName] = useState('');
@@ -47,35 +47,31 @@ export default function OnboardingClubSetupScreen() {
   
   const [isLoading, setIsLoading] = useState(false);
 
-  const isFormValid = setupMode === 'search' 
-    ? selectedClub !== null
-    : clubName.trim().length >= 3 && clubType && city.trim().length >= 2;
+  const isManualFormValid = clubName.trim().length >= 3 && clubType && city.trim().length >= 2;
 
-  const handleSelectClub = (club: PzpnClubSearchResult) => {
+  const handleWizardComplete = async (club: Club, data: SeasonData | null) => {
     setSelectedClub(club);
-  };
-
-  const handleCreateClub = async () => {
-    if (!isFormValid) return;
+    setSeasonData(data);
     
     setIsLoading(true);
-    
     try {
-      if (setupMode === 'search' && selectedClub) {
-        // Store PZPN club data
-        await AsyncStorage.setItem('onboarding_club_name', selectedClub.name);
-        await AsyncStorage.setItem('onboarding_club_type', 'pzpn');
-        await AsyncStorage.setItem('onboarding_club_city', selectedClub.region);
-        await AsyncStorage.setItem('onboarding_club_pzpn_id', selectedClub.id);
-        await AsyncStorage.setItem('onboarding_club_league', selectedClub.league);
-        await AsyncStorage.setItem('onboarding_club_region', selectedClub.regionCode);
-      } else {
-        // Store manual club data
-        await AsyncStorage.setItem('onboarding_club_name', clubName.trim());
-        await AsyncStorage.setItem('onboarding_club_type', clubType!);
-        await AsyncStorage.setItem('onboarding_club_city', city.trim());
-        if (manualRegion) {
-          await AsyncStorage.setItem('onboarding_club_region', manualRegion);
+      // Store PZPN club data
+      await AsyncStorage.setItem('onboarding_club_name', club.name);
+      await AsyncStorage.setItem('onboarding_club_type', 'pzpn');
+      await AsyncStorage.setItem('onboarding_club_city', club.city);
+      await AsyncStorage.setItem('onboarding_club_pzpn_id', club.id);
+      await AsyncStorage.setItem('onboarding_club_league', club.leagueCode);
+      await AsyncStorage.setItem('onboarding_club_district', club.districtCode);
+      
+      if (data) {
+        await AsyncStorage.setItem('onboarding_club_season', data.season);
+        await AsyncStorage.setItem('onboarding_club_league_name', data.leagueName);
+        
+        // Find club position in standings
+        const standing = data.standings.find(s => s.clubId === club.id);
+        if (standing) {
+          await AsyncStorage.setItem('onboarding_club_position', standing.position.toString());
+          await AsyncStorage.setItem('onboarding_club_points', standing.points.toString());
         }
       }
       
@@ -90,7 +86,46 @@ export default function OnboardingClubSetupScreen() {
     }
   };
 
-  const regions = getRegions();
+  const handleWizardCancel = () => {
+    setSetupMode('select');
+  };
+
+  const handleCreateManualClub = async () => {
+    if (!isManualFormValid) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Store manual club data
+      await AsyncStorage.setItem('onboarding_club_name', clubName.trim());
+      await AsyncStorage.setItem('onboarding_club_type', clubType!);
+      await AsyncStorage.setItem('onboarding_club_city', city.trim());
+      if (manualRegion) {
+        await AsyncStorage.setItem('onboarding_club_region', manualRegion);
+      }
+      
+      await AsyncStorage.setItem('onboarding_completed', 'pending');
+      
+      // Navigate to final step
+      router.push('/onboarding/complete');
+    } catch (error) {
+      console.error('Error saving club data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Show wizard full screen
+  if (setupMode === 'wizard') {
+    return (
+      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+        <ClubSelectionWizard
+          onComplete={handleWizardComplete}
+          onCancel={handleWizardCancel}
+        />
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -105,42 +140,14 @@ export default function OnboardingClubSetupScreen() {
           </Pressable>
           <View style={styles.headerContent}>
             <ThemedText type="title" style={styles.headerTitle}>
-              Utwórz klub
+              {setupMode === 'select' ? 'Wybierz opcję' : 'Utwórz klub'}
             </ThemedText>
             <ThemedText style={styles.headerSubtitle}>
-              Znajdź swój klub w bazie PZPN lub utwórz nowy
+              {setupMode === 'select' 
+                ? 'Znajdź swój klub lub utwórz nowy'
+                : 'Wprowadź dane swojego klubu'}
             </ThemedText>
           </View>
-        </View>
-
-        {/* Mode Selector */}
-        <View style={styles.modeSelector}>
-          <Pressable
-            style={[styles.modeButton, setupMode === 'search' && styles.modeButtonActive]}
-            onPress={() => setSetupMode('search')}
-          >
-            <Ionicons 
-              name="search" 
-              size={20} 
-              color={setupMode === 'search' ? '#fff' : AppColors.textSecondary} 
-            />
-            <ThemedText style={[styles.modeButtonText, setupMode === 'search' && styles.modeButtonTextActive]}>
-              Znajdź klub
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            style={[styles.modeButton, setupMode === 'manual' && styles.modeButtonActive]}
-            onPress={() => setSetupMode('manual')}
-          >
-            <Ionicons 
-              name="add-circle-outline" 
-              size={20} 
-              color={setupMode === 'manual' ? '#fff' : AppColors.textSecondary} 
-            />
-            <ThemedText style={[styles.modeButtonText, setupMode === 'manual' && styles.modeButtonTextActive]}>
-              Utwórz nowy
-            </ThemedText>
-          </Pressable>
         </View>
 
         <ScrollView 
@@ -149,54 +156,90 @@ export default function OnboardingClubSetupScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {setupMode === 'search' ? (
+          {setupMode === 'select' ? (
             <>
-              {/* PZPN Club Search */}
+              {/* Option 1: Find Club in PZPN */}
               <Animated.View entering={FadeInUp.delay(100).duration(400)}>
-                <ThemedText style={styles.label}>Wyszukaj klub w bazie PZPN</ThemedText>
-                <ClubSearch
-                  onSelectClub={handleSelectClub}
-                  selectedRegion={selectedRegion}
-                  onChangeRegion={setSelectedRegion}
-                />
+                <Pressable 
+                  style={styles.optionCard}
+                  onPress={() => setSetupMode('wizard')}
+                >
+                  <View style={styles.optionIconContainer}>
+                    <Ionicons name="search" size={32} color={AppColors.primary} />
+                  </View>
+                  <View style={styles.optionContent}>
+                    <ThemedText style={styles.optionTitle}>Znajdź klub w bazie PZPN</ThemedText>
+                    <ThemedText style={styles.optionDescription}>
+                      Wybierz województwo → okręg → ligę → klub
+                    </ThemedText>
+                    <View style={styles.optionFeatures}>
+                      <View style={styles.featureItem}>
+                        <Ionicons name="checkmark-circle" size={16} color={AppColors.success} />
+                        <ThemedText style={styles.featureText}>Aktualna tabela ligowa</ThemedText>
+                      </View>
+                      <View style={styles.featureItem}>
+                        <Ionicons name="checkmark-circle" size={16} color={AppColors.success} />
+                        <ThemedText style={styles.featureText}>Dane o klubie z PZPN</ThemedText>
+                      </View>
+                      <View style={styles.featureItem}>
+                        <Ionicons name="checkmark-circle" size={16} color={AppColors.success} />
+                        <ThemedText style={styles.featureText}>Sezon 2024/2025</ThemedText>
+                      </View>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
+                </Pressable>
               </Animated.View>
 
-              {/* Selected Club Card */}
-              {selectedClub && (
-                <Animated.View entering={FadeInUp.duration(300)} style={styles.selectedClubCard}>
-                  <View style={styles.selectedClubHeader}>
-                    <View style={styles.selectedClubIcon}>
-                      <Ionicons name="football" size={32} color={AppColors.primary} />
-                    </View>
-                    <View style={styles.selectedClubInfo}>
-                      <ThemedText style={styles.selectedClubName}>{selectedClub.name}</ThemedText>
-                      <ThemedText style={styles.selectedClubMeta}>
-                        {selectedClub.region} • {selectedClub.league}
-                      </ThemedText>
-                    </View>
-                    <Pressable onPress={() => setSelectedClub(null)} style={styles.removeButton}>
-                      <Ionicons name="close-circle" size={24} color={AppColors.textSecondary} />
-                    </Pressable>
+              {/* Option 2: Create Manual Club */}
+              <Animated.View entering={FadeInUp.delay(200).duration(400)}>
+                <Pressable 
+                  style={styles.optionCard}
+                  onPress={() => setSetupMode('manual')}
+                >
+                  <View style={[styles.optionIconContainer, { backgroundColor: `${AppColors.secondary}20` }]}>
+                    <Ionicons name="add-circle" size={32} color={AppColors.secondary} />
                   </View>
-                  <View style={styles.selectedClubBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color={AppColors.success} />
-                    <ThemedText style={styles.selectedClubBadgeText}>
-                      Klub zweryfikowany w bazie PZPN
+                  <View style={styles.optionContent}>
+                    <ThemedText style={styles.optionTitle}>Utwórz nowy klub</ThemedText>
+                    <ThemedText style={styles.optionDescription}>
+                      Dla klubów spoza systemu PZPN
                     </ThemedText>
+                    <View style={styles.optionFeatures}>
+                      <View style={styles.featureItem}>
+                        <Ionicons name="checkmark-circle" size={16} color={AppColors.success} />
+                        <ThemedText style={styles.featureText}>Drużyny amatorskie</ThemedText>
+                      </View>
+                      <View style={styles.featureItem}>
+                        <Ionicons name="checkmark-circle" size={16} color={AppColors.success} />
+                        <ThemedText style={styles.featureText}>Akademie młodzieżowe</ThemedText>
+                      </View>
+                      <View style={styles.featureItem}>
+                        <Ionicons name="checkmark-circle" size={16} color={AppColors.success} />
+                        <ThemedText style={styles.featureText}>Drużyny firmowe</ThemedText>
+                      </View>
+                    </View>
                   </View>
-                </Animated.View>
-              )}
+                  <Ionicons name="chevron-forward" size={24} color={AppColors.textSecondary} />
+                </Pressable>
+              </Animated.View>
 
-              {/* Info about PZPN integration */}
-              <Animated.View entering={FadeInUp.delay(200).duration(400)} style={styles.infoBox}>
+              {/* Info Box */}
+              <Animated.View entering={FadeInUp.delay(300).duration(400)} style={styles.infoBox}>
                 <Ionicons name="information-circle" size={24} color={AppColors.info} />
                 <ThemedText style={styles.infoText}>
-                  Wybierając klub z bazy PZPN, automatycznie otrzymasz dostęp do aktualnej tabeli ligowej i terminarz meczów.
+                  Wybierając klub z bazy PZPN, automatycznie otrzymasz dostęp do aktualnej tabeli ligowej i pozycji w rozgrywkach.
                 </ThemedText>
               </Animated.View>
             </>
-          ) : (
+          ) : setupMode === 'manual' && (
             <>
+              {/* Back to selection */}
+              <Pressable onPress={() => setSetupMode('select')} style={styles.backToSelect}>
+                <Ionicons name="arrow-back" size={20} color={AppColors.primary} />
+                <ThemedText style={styles.backToSelectText}>Wróć do wyboru opcji</ThemedText>
+              </Pressable>
+
               {/* Manual Club Creation */}
               <Animated.View entering={FadeInUp.delay(100).duration(400)}>
                 <ThemedText style={styles.label}>Nazwa klubu *</ThemedText>
@@ -230,7 +273,7 @@ export default function OnboardingClubSetupScreen() {
                   showsHorizontalScrollIndicator={false}
                   style={styles.regionScroll}
                 >
-                  {regions.map((region) => (
+                  {REGIONS.map((region) => (
                     <Pressable
                       key={region.code}
                       onPress={() => setManualRegion(region.code === manualRegion ? undefined : region.code)}
@@ -268,8 +311,8 @@ export default function OnboardingClubSetupScreen() {
                         color={clubType === type.id ? AppColors.primary : AppColors.textSecondary} 
                       />
                       <ThemedText style={[
-                        styles.typeName,
-                        clubType === type.id && styles.typeNameSelected,
+                        styles.typeCardText,
+                        clubType === type.id && styles.typeCardTextSelected,
                       ]}>
                         {type.name}
                       </ThemedText>
@@ -278,42 +321,35 @@ export default function OnboardingClubSetupScreen() {
                 </View>
               </Animated.View>
 
-              <Animated.View entering={FadeInUp.delay(400).duration(400)} style={styles.infoBox}>
-                <Ionicons name="information-circle" size={24} color={AppColors.info} />
-                <ThemedText style={styles.infoText}>
-                  Po utworzeniu klubu otrzymasz 30-dniowy bezpłatny okres próbny z pełnym dostępem do wszystkich funkcji.
-                </ThemedText>
+              {/* Trial Info */}
+              <Animated.View entering={FadeInUp.delay(400).duration(400)} style={styles.trialBox}>
+                <View style={styles.trialIcon}>
+                  <Ionicons name="gift" size={24} color={AppColors.primary} />
+                </View>
+                <View style={styles.trialContent}>
+                  <ThemedText style={styles.trialTitle}>30 dni za darmo!</ThemedText>
+                  <ThemedText style={styles.trialText}>
+                    Pełny dostęp do wszystkich funkcji przez pierwszy miesiąc.
+                  </ThemedText>
+                </View>
+              </Animated.View>
+
+              {/* Create Button */}
+              <Animated.View entering={FadeInUp.delay(500).duration(400)}>
+                <Pressable
+                  style={[styles.createButton, !isManualFormValid && styles.createButtonDisabled]}
+                  onPress={handleCreateManualClub}
+                  disabled={!isManualFormValid || isLoading}
+                >
+                  <ThemedText style={styles.createButtonText}>
+                    {isLoading ? 'Tworzenie...' : 'Utwórz klub'}
+                  </ThemedText>
+                  <Ionicons name="arrow-forward" size={20} color="#fff" />
+                </Pressable>
               </Animated.View>
             </>
           )}
         </ScrollView>
-
-        {/* Bottom Section */}
-        <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 16 }]}>
-          <Pressable
-            onPress={handleCreateClub}
-            disabled={!isFormValid || isLoading}
-            style={[
-              styles.createButton,
-              (!isFormValid || isLoading) && styles.createButtonDisabled,
-            ]}
-          >
-            <ThemedText style={styles.createButtonText}>
-              {isLoading ? 'Tworzenie...' : setupMode === 'search' ? 'Wybierz ten klub' : 'Utwórz klub'}
-            </ThemedText>
-            <Ionicons name="arrow-forward" size={20} color="#fff" />
-          </Pressable>
-
-          {/* Progress indicator */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressDots}>
-              <View style={styles.progressDotCompleted} />
-              <View style={[styles.progressDot, styles.progressDotActive]} />
-              <View style={styles.progressDot} />
-            </View>
-            <ThemedText style={styles.progressText}>Krok 2 z 3</ThemedText>
-          </View>
-        </View>
       </KeyboardAvoidingView>
     </ThemedView>
   );
@@ -328,139 +364,127 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
   },
   backButton: {
-    padding: 8,
-    marginLeft: -8,
-    marginBottom: 8,
+    padding: Spacing.sm,
+    marginLeft: -Spacing.sm,
+    marginBottom: Spacing.sm,
   },
-  headerContent: {
-    marginBottom: 8,
-  },
+  headerContent: {},
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: AppColors.textPrimary,
-    marginBottom: 8,
   },
   headerSubtitle: {
     fontSize: 16,
     color: AppColors.textSecondary,
-    lineHeight: 22,
-  },
-  modeSelector: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: AppColors.bgCard,
-    borderRadius: Radius.md,
-    padding: 4,
-  },
-  modeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: Radius.sm,
-    gap: 8,
-  },
-  modeButtonActive: {
-    backgroundColor: AppColors.primary,
-  },
-  modeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.textSecondary,
-  },
-  modeButtonTextActive: {
-    color: '#fff',
+    marginTop: 4,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+  },
+  optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: AppColors.bgCard,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  optionIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: `${AppColors.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: AppColors.textPrimary,
+  },
+  optionDescription: {
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    marginTop: 4,
+  },
+  optionFeatures: {
+    marginTop: Spacing.sm,
+    gap: 4,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  featureText: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: `${AppColors.info}15`,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    color: AppColors.textSecondary,
+    lineHeight: 20,
+  },
+  backToSelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.lg,
+  },
+  backToSelectText: {
+    fontSize: 14,
+    color: AppColors.primary,
+    fontWeight: '500',
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: AppColors.textPrimary,
-    marginBottom: 8,
-    marginTop: 16,
+    color: AppColors.textSecondary,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.md,
   },
   input: {
     backgroundColor: AppColors.bgCard,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
     fontSize: 16,
     color: AppColors.textPrimary,
     borderWidth: 1,
     borderColor: AppColors.borderLight,
   },
-  selectedClubCard: {
-    backgroundColor: AppColors.bgCard,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginTop: Spacing.md,
-    borderWidth: 2,
-    borderColor: AppColors.primary,
-  },
-  selectedClubHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  selectedClubIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: `${AppColors.primary}20`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  selectedClubInfo: {
-    flex: 1,
-  },
-  selectedClubName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: AppColors.textPrimary,
-  },
-  selectedClubMeta: {
-    fontSize: 14,
-    color: AppColors.textSecondary,
-    marginTop: 2,
-  },
-  removeButton: {
-    padding: Spacing.xs,
-  },
-  selectedClubBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginTop: Spacing.md,
-    paddingTop: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
-  },
-  selectedClubBadgeText: {
-    fontSize: 13,
-    color: AppColors.success,
-    fontWeight: '500',
-  },
   regionScroll: {
-    marginTop: 8,
+    marginHorizontal: -Spacing.lg,
+    paddingHorizontal: Spacing.lg,
   },
   regionChip: {
-    backgroundColor: AppColors.bgCard,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: Radius.full,
+    backgroundColor: AppColors.bgCard,
     marginRight: Spacing.sm,
     borderWidth: 1,
     borderColor: AppColors.borderLight,
@@ -470,7 +494,7 @@ const styles = StyleSheet.create({
     borderColor: AppColors.primary,
   },
   regionChipText: {
-    fontSize: 13,
+    fontSize: 14,
     color: AppColors.textSecondary,
   },
   regionChipTextSelected: {
@@ -480,97 +504,77 @@ const styles = StyleSheet.create({
   typeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 8,
+    gap: Spacing.sm,
   },
   typeCard: {
-    width: '47%',
+    width: '48%',
     backgroundColor: AppColors.bgCard,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
     alignItems: 'center',
+    gap: Spacing.sm,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   typeCardSelected: {
     borderColor: AppColors.primary,
-    backgroundColor: `${AppColors.primary}15`,
+    backgroundColor: `${AppColors.primary}10`,
   },
-  typeName: {
-    fontSize: 14,
+  typeCardText: {
+    fontSize: 13,
     color: AppColors.textSecondary,
-    marginTop: 8,
     textAlign: 'center',
   },
-  typeNameSelected: {
+  typeCardTextSelected: {
     color: AppColors.primary,
     fontWeight: '600',
   },
-  infoBox: {
+  trialBox: {
     flexDirection: 'row',
-    backgroundColor: `${AppColors.info}15`,
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 24,
-    gap: 12,
+    alignItems: 'center',
+    backgroundColor: `${AppColors.primary}15`,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.lg,
+    gap: Spacing.md,
   },
-  infoText: {
+  trialIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: `${AppColors.primary}20`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trialContent: {
     flex: 1,
-    fontSize: 14,
-    color: AppColors.info,
-    lineHeight: 20,
   },
-  bottomSection: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: AppColors.borderLight,
+  trialTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: AppColors.primary,
+  },
+  trialText: {
+    fontSize: 13,
+    color: AppColors.textSecondary,
+    marginTop: 2,
   },
   createButton: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    backgroundColor: AppColors.primary,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.lg,
+    marginTop: Spacing.xl,
+    gap: Spacing.sm,
   },
   createButtonDisabled: {
     opacity: 0.5,
   },
   createButtonText: {
-    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-  },
-  progressContainer: {
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  progressDots: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: AppColors.bgElevated,
-  },
-  progressDotActive: {
-    backgroundColor: AppColors.primary,
-    width: 24,
-  },
-  progressDotCompleted: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: AppColors.primary,
-  },
-  progressText: {
-    fontSize: 12,
-    color: AppColors.textSecondary,
+    color: '#fff',
   },
 });

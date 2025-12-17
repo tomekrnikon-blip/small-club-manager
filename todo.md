@@ -912,3 +912,14 @@
 - [x] ClubSearch component with region filter
 - [x] LeagueTable component with standings
 - [x] PZPN client library (lib/pzpn-client.ts)
+
+
+## Multi-Level Club Search (Completed)
+- [x] Hierarchical data: Województwo → Okręg → Liga → Klub
+- [x] Multi-step selection wizard UI (5 steps)
+- [x] Current season table fetch after club selection
+- [x] Club data display (name, league, position, stats)
+- [x] 16 województw with OZPN districts
+- [x] Central leagues (Ekstraklasa to 3. Liga) + Regional leagues
+- [x] Sample clubs data for major cities
+- [x] Season 2024/2025 standings preview
