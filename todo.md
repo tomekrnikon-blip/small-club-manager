@@ -933,3 +933,23 @@
 - [x] Update season to 2025/2026
 - [x] Age group badges with colors (SEN, U19, U17, U15, U13, U11, U9, U7)
 - [x] Club search within district
+
+
+## RegioWyniki Integration, Logo Upload & Schedule Sync (In Progress)
+- [ ] RegioWyniki API/scraping for real club data
+- [ ] Real league tables from RegioWyniki
+- [ ] Club logo upload in settings
+- [ ] Image picker and cropping
+- [ ] Match schedule synchronization
+- [ ] Upcoming matches display after team selection
+
+
+## RegioWyniki Integration, Logo Upload & Schedule Sync (Completed)
+- [x] RegioWyniki web scraping service (server/services/regiowyniki-scraper.ts)
+- [x] Club search from RegioWyniki
+- [x] League table fetch from RegioWyniki
+- [x] Club logo upload functionality (app/club-logo.tsx)
+- [x] Match schedule synchronization (app/schedule-sync.tsx)
+- [x] Auto-sync after team selection
+- [x] Gallery/camera image picker for logo
+- [x] Pull-to-refresh for schedule sync

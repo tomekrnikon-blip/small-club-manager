@@ -276,12 +276,13 @@ export default function ClubSettingsScreen() {
           <View style={styles.clubLogo}>
             <Ionicons name="football" size={48} color="#22c55e" />
           </View>
-          {isEditing && (
-            <Pressable style={styles.changeLogoButton}>
-              <Ionicons name="camera" size={16} color="#22c55e" />
-              <ThemedText style={styles.changeLogoText}>Zmień logo</ThemedText>
-            </Pressable>
-          )}
+          <Pressable 
+            style={styles.changeLogoButton}
+            onPress={() => router.push('/club-logo')}
+          >
+            <Ionicons name="camera" size={16} color="#22c55e" />
+            <ThemedText style={styles.changeLogoText}>Zmień logo</ThemedText>
+          </Pressable>
         </View>
 
         {/* Basic Info */}
