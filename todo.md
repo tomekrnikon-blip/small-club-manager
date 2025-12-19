@@ -970,3 +970,11 @@
 - [x] Handle rate limiting (10 req/min per domain)
 - [x] Caching with configurable TTL (search: 10min, table: 30min, schedule: 1h)
 - [x] Cache statistics and clear endpoints in tRPC router
+
+
+## New Features & Fixes (Completed)
+- [x] Add 1h before match reminder notifications
+- [x] Create sync history screen with logs
+- [x] Change to static bundle ID (pl.smallclubmanager.app) and package name
+- [x] Remove background music completely (only haptic feedback now)
+- [x] Add missing manifest icons to public folder (72, 96, 128, 144, 152, 192, 384, 512)

@@ -2,13 +2,9 @@
 import "./scripts/load-env.js";
 import type { ExpoConfig } from "expo/config";
 
-// Bundle ID format: space.manus.<project_name_dots>.<timestamp>
-// e.g., "my-app" created at 2024-01-15 10:30:45 -> "space.manus.my.app.t20240115103045"
-const bundleId = "space.manus.small.club.manager.t20241216071847";
-// Extract timestamp from bundle ID and prefix with "manus" for deep link scheme
-// e.g., "space.manus.my.app.t20240115103045" -> "manus20240115103045"
-const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
-const schemeFromBundleId = `manus${timestamp}`;
+// Static bundle ID - do not change
+const bundleId = "pl.smallclubmanager.app";
+const scheme = "smallclubmanager";
 
 const env = {
   // App branding - update these values directly (do not use env vars)
@@ -16,7 +12,7 @@ const env = {
   appSlug: 'small-club-manager',
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   logoUrl: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663105974624/eCyqKctKqWPrAuCX.png',
-  scheme: schemeFromBundleId,
+  scheme: scheme,
   iosBundleId: bundleId,
   androidPackage: bundleId,
 };
@@ -34,7 +30,7 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
     infoPlist: {
-      UIBackgroundModes: ["audio"],
+      // Background modes removed - no background audio needed
     },
   },
   android: {

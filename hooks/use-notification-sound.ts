@@ -1,121 +1,66 @@
 /**
- * useNotificationSound - Hook for playing notification sounds
+ * useNotificationSound - Hook for haptic feedback on notifications
+ * Note: Audio playback has been removed, only haptic feedback is used
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SOUND_ENABLED_KEY = '@skm_notification_sound_enabled';
+const HAPTIC_ENABLED_KEY = '@skm_haptic_feedback_enabled';
 
-type SoundType = 'notification' | 'success' | 'error' | 'callup';
-
-// Sound configurations - will use Haptics as fallback if sounds not available
-// Note: To add custom sounds, place .mp3 files in assets/sounds/ directory
-let SOUNDS: Record<SoundType, any> = {
-  notification: null,
-  success: null,
-  error: null,
-  callup: null,
-};
-
-// Try to load sounds, but don't fail if they don't exist
-try {
-  SOUNDS = {
-    notification: require('@/assets/sounds/notification.mp3'),
-    success: require('@/assets/sounds/success.mp3'),
-    error: require('@/assets/sounds/error.mp3'),
-    callup: require('@/assets/sounds/callup.mp3'),
-  };
-} catch (e) {
-  console.log('[NotificationSound] Sound files not found, using haptic feedback only');
-}
+type FeedbackType = 'notification' | 'success' | 'error' | 'callup';
 
 export function useNotificationSound() {
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
 
   // Load preference
   useEffect(() => {
     const loadPreference = async () => {
       try {
-        const stored = await AsyncStorage.getItem(SOUND_ENABLED_KEY);
+        const stored = await AsyncStorage.getItem(HAPTIC_ENABLED_KEY);
         if (stored !== null) {
           setSoundEnabled(stored === 'true');
         }
       } catch (error) {
-        console.error('[NotificationSound] Error loading preference:', error);
+        console.error('[HapticFeedback] Error loading preference:', error);
       }
     };
 
     loadPreference();
   }, []);
 
-  // Cleanup sound on unmount
-  useEffect(() => {
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, [sound]);
-
   const toggleSound = useCallback(async () => {
     const newValue = !soundEnabled;
     setSoundEnabled(newValue);
-    await AsyncStorage.setItem(SOUND_ENABLED_KEY, String(newValue));
+    await AsyncStorage.setItem(HAPTIC_ENABLED_KEY, String(newValue));
   }, [soundEnabled]);
 
-  const playSound = useCallback(async (type: SoundType = 'notification') => {
+  const playSound = useCallback(async (type: FeedbackType = 'notification') => {
     if (!soundEnabled) return;
 
-    // Always provide haptic feedback
+    // Provide haptic feedback based on type
     try {
-      if (type === 'error') {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      } else if (type === 'success') {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } else {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      switch (type) {
+        case 'error':
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          break;
+        case 'success':
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          break;
+        case 'callup':
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          break;
+        case 'notification':
+        default:
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          break;
       }
     } catch (e) {
       // Haptics not available on web
+      console.log('[HapticFeedback] Haptics not available');
     }
-
-    // Try to play sound if available
-    if (!SOUNDS[type]) return;
-
-    try {
-      // Unload previous sound
-      if (sound) {
-        await sound.unloadAsync();
-      }
-
-      // Configure audio mode
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: false,
-        staysActiveInBackground: false,
-      });
-
-      // Load and play sound
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        SOUNDS[type],
-        { shouldPlay: true, volume: 0.5 }
-      );
-
-      setSound(newSound);
-
-      // Auto unload after playing
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          newSound.unloadAsync();
-        }
-      });
-    } catch (error) {
-      console.log('[NotificationSound] Sound playback not available:', error);
-    }
-  }, [soundEnabled, sound]);
+  }, [soundEnabled]);
 
   return {
     soundEnabled,
@@ -125,29 +70,29 @@ export function useNotificationSound() {
 }
 
 /**
- * Simple function to play notification sound (for use outside components)
+ * Simple function to trigger haptic feedback (for use outside components)
  */
-export async function playNotificationSound(type: SoundType = 'notification'): Promise<void> {
+export async function playNotificationSound(type: FeedbackType = 'notification'): Promise<void> {
   try {
-    const stored = await AsyncStorage.getItem(SOUND_ENABLED_KEY);
+    const stored = await AsyncStorage.getItem(HAPTIC_ENABLED_KEY);
     if (stored === 'false') return;
 
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: false,
-      staysActiveInBackground: false,
-    });
-
-    const { sound } = await Audio.Sound.createAsync(
-      SOUNDS[type],
-      { shouldPlay: true, volume: 0.5 }
-    );
-
-    sound.setOnPlaybackStatusUpdate((status) => {
-      if (status.isLoaded && status.didJustFinish) {
-        sound.unloadAsync();
-      }
-    });
+    switch (type) {
+      case 'error':
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        break;
+      case 'success':
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        break;
+      case 'callup':
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        break;
+      case 'notification':
+      default:
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        break;
+    }
   } catch (error) {
-    console.error('[NotificationSound] Error playing sound:', error);
+    console.log('[HapticFeedback] Haptics not available');
   }
 }
