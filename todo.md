@@ -962,3 +962,11 @@
 - [x] Match reminder notifications 24h before games (server/services/match-reminder-service.ts)
 - [x] Push notification for upcoming matches
 - [x] RegioWyniki sync settings screen (app/regiowyniki-sync.tsx)
+
+
+## CORS Proxy for RegioWyniki (Completed)
+- [x] Create CORS proxy service (server/services/cors-proxy.ts)
+- [x] Update regiowyniki-scraper to use proxy
+- [x] Handle rate limiting (10 req/min per domain)
+- [x] Caching with configurable TTL (search: 10min, table: 30min, schedule: 1h)
+- [x] Cache statistics and clear endpoints in tRPC router

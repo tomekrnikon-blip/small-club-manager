@@ -2,9 +2,11 @@
  * RegioWyniki.pl Web Scraper Service
  * Fetches real club data, league tables, and match schedules
  * Season 2025/2026
+ * 
+ * Uses CORS proxy for server-side fetching with caching and rate limiting
  */
 
-import * as cheerio from 'cheerio';
+import { fetchAndParse } from './cors-proxy';
 
 const BASE_URL = 'https://regiowyniki.pl';
 
@@ -84,25 +86,25 @@ function encodeClubName(name: string): string {
     .replace(/__+/g, '_');
 }
 
+// Cache TTL settings
+const SEARCH_CACHE_TTL = 10 * 60 * 1000; // 10 minutes for search results
+const TABLE_CACHE_TTL = 30 * 60 * 1000;  // 30 minutes for league tables
+const SCHEDULE_CACHE_TTL = 60 * 60 * 1000; // 1 hour for schedules
+
 /**
  * Search for clubs by name
+ * Uses CORS proxy with caching
  */
 export async function searchClubs(query: string): Promise<ClubSearchResult[]> {
   try {
     const searchUrl = `${BASE_URL}/szukaj/Pilka_Nozna/?search_text=${encodeURIComponent(query)}`;
-    const response = await fetch(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SmallClubManager/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
+    
+    const { $, fromCache } = await fetchAndParse(searchUrl, {
+      cacheTtl: SEARCH_CACHE_TTL,
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    
+    console.log(`[RegioWyniki] Search for "${query}" - ${fromCache ? 'from cache' : 'fresh fetch'}`);
+    
     const results: ClubSearchResult[] = [];
 
     // Parse search results
@@ -138,22 +140,15 @@ export async function searchClubs(query: string): Promise<ClubSearchResult[]> {
 
 /**
  * Get club details from club page
+ * Uses CORS proxy with caching
  */
 export async function getClubDetails(clubUrl: string): Promise<ClubDetails | null> {
   try {
-    const response = await fetch(clubUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SmallClubManager/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
+    const { $, fromCache } = await fetchAndParse(clubUrl, {
+      cacheTtl: TABLE_CACHE_TTL,
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    
+    console.log(`[RegioWyniki] Get club details - ${fromCache ? 'from cache' : 'fresh fetch'}`);
 
     // Extract club name from title
     const name = $('h1').first().text().replace('Terminarz', '').replace('Tabela', '').trim();
@@ -188,24 +183,18 @@ export async function getClubDetails(clubUrl: string): Promise<ClubDetails | nul
 
 /**
  * Get league table for a club
+ * Uses CORS proxy with caching
  */
 export async function getLeagueTable(clubUrl: string): Promise<LeagueTableEntry[]> {
   try {
     const tableUrl = clubUrl.endsWith('/') ? `${clubUrl}tabela/` : `${clubUrl}/tabela/`;
     
-    const response = await fetch(tableUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SmallClubManager/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
+    const { $, fromCache } = await fetchAndParse(tableUrl, {
+      cacheTtl: TABLE_CACHE_TTL,
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    
+    console.log(`[RegioWyniki] Get league table - ${fromCache ? 'from cache' : 'fresh fetch'}`);
+    
     const entries: LeagueTableEntry[] = [];
 
     // Parse table rows - looking for the main standings table
@@ -278,22 +267,16 @@ export async function getLeagueTable(clubUrl: string): Promise<LeagueTableEntry[
 
 /**
  * Get match schedule for a club
+ * Uses CORS proxy with caching
  */
 export async function getMatchSchedule(clubUrl: string): Promise<MatchScheduleEntry[]> {
   try {
-    const response = await fetch(clubUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SmallClubManager/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
+    const { $, fromCache } = await fetchAndParse(clubUrl, {
+      cacheTtl: SCHEDULE_CACHE_TTL,
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    
+    console.log(`[RegioWyniki] Get match schedule - ${fromCache ? 'from cache' : 'fresh fetch'}`);
+    
     const matches: MatchScheduleEntry[] = [];
 
     // Extract club name for determining home/away

@@ -13,6 +13,7 @@ import {
   getMatchSchedule,
   getFullClubData,
 } from "../services/regiowyniki-scraper";
+import { getCacheStats, clearCache } from "../services/cors-proxy";
 
 export const regiowynikRouter = router({
   /**
@@ -128,6 +129,26 @@ export const regiowynikRouter = router({
           message: 'Nie udało się pobrać pełnych danych klubu',
         });
       }
+    }),
+
+  /**
+   * Get CORS proxy cache statistics
+   */
+  getCacheStats: protectedProcedure
+    .query(async () => {
+      return getCacheStats();
+    }),
+
+  /**
+   * Clear CORS proxy cache
+   */
+  clearCache: protectedProcedure
+    .input(z.object({
+      url: z.string().url().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      clearCache(input.url);
+      return { success: true };
     }),
 
   /**
