@@ -953,3 +953,12 @@
 - [x] Auto-sync after team selection
 - [x] Gallery/camera image picker for logo
 - [x] Pull-to-refresh for schedule sync
+
+
+## Real API, Auto-Sync & Match Reminders (Completed)
+- [x] Server-side proxy endpoint for RegioWyniki scraping (server/routers/regiowyniki.ts)
+- [x] tRPC router for RegioWyniki data (searchClubs, getLeagueTable, getMatchSchedule, syncClubData)
+- [x] Automatic daily sync cron job (server/services/regiowyniki-sync-cron.ts)
+- [x] Match reminder notifications 24h before games (server/services/match-reminder-service.ts)
+- [x] Push notification for upcoming matches
+- [x] RegioWyniki sync settings screen (app/regiowyniki-sync.tsx)

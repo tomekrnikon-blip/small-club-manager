@@ -7,6 +7,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { encrypt, decrypt, maskSensitive } from "./utils/encryption";
 import { logAuditEvent, AuditActions, createAuditContext } from "./services/auditService";
+import { regiowynikRouter } from "./routers/regiowyniki";
 import { checkRateLimit, createRateLimitIdentifier, getRateLimitHeaders } from "./services/rateLimitService";
 
 // Role hierarchy and permissions
@@ -113,6 +114,7 @@ function requireMasterAdmin(user: { isMasterAdmin: boolean }) {
 
 export const appRouter = router({
   system: systemRouter,
+  regiowyniki: regiowynikRouter,
   
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
